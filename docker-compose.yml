@@ -1,0 +1,31 @@
+services:
+  app:
+    container_name: user-app
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/user_db
+      - SPRING_DATASOURCE_USERNAME=danworldman
+      - SPRING_DATASOURCE_PASSWORD=user
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    container_name: user-db
+    image: postgres:17
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=user_db
+      - POSTGRES_USER=danworldman
+      - POSTGRES_PASSWORD=user
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U danworldman -d user_db" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+volumes:
+  db-data:
