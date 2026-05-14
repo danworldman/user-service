@@ -7,10 +7,9 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
 import java.util.Optional;
 
-interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
     Optional<User> findByEmail(String email);
 
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.paymentCards WHERE u.id = :id")
