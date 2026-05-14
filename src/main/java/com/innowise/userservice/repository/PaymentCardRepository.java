@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 interface PaymentCardRepository extends JpaRepository<PaymentCard, Long> {
-    List<PaymentCard> findByUserId(long userId);
+    List<PaymentCard> findByUserId(Long userId);
 
     @Query("SELECT c FROM PaymentCard c WHERE c.user.id = :userId AND c.isActive = true")
     List<PaymentCard> findActiveCardsByUserId(@Param("userId") Long userId);
@@ -17,6 +17,4 @@ interface PaymentCardRepository extends JpaRepository<PaymentCard, Long> {
     @Modifying(clearAutomatically = true)
     @Query(value = "UPDATE payment_cards SET active = :active WHERE id = :id", nativeQuery = true)
     int updateCardActiveStatus(@Param("id") Long id, @Param("active") boolean active);
-
-    int countByUserId(Long userId);
 }
