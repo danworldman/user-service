@@ -12,5 +12,5 @@ public record UserUpdateRequest(
         @Nullable
         String email,
         @Nullable
-        LocalDate birthdate
+        LocalDate birthDate
 ) {}

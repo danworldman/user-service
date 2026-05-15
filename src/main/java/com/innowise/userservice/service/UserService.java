@@ -20,4 +20,6 @@ public interface UserService {
     void deactivateUserStatus(Long id);
 
     Page<UserResponse> getAllUsers(String name, String surname, Pageable pageable);
+
+    UserResponse getUserWithCards(Long id);
 }

@@ -47,10 +47,14 @@ public class UserController {
         userService.deactivateUserStatus(id);
     }
 
+    @GetMapping
     public Page<UserResponse> getAllUsers(@RequestParam(required = false) String name,
                                           @RequestParam(required = false) String surname,
                                           @PageableDefault(size = 10) Pageable pageable) {
         return userService.getAllUsers(name, surname, pageable);
     }
 
+    @GetMapping("/{id}/with-cards")    public UserResponse getUserWithCards(@PathVariable Long id){
+        return userService.getUserWithCards(id);
+    }
 }

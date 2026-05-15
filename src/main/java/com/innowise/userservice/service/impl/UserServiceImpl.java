@@ -17,6 +17,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @AllArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -122,4 +124,14 @@ public class UserServiceImpl implements UserService {
 
         return userPage.map(userMapper::toDto);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponse getUserWithCards(Long id){
+        User user = userRepository.findUsersWithPaymentCards(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        return userMapper.toDto(user);
+    }
+
 }
