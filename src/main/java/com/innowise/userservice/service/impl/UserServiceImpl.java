@@ -3,6 +3,8 @@ package com.innowise.userservice.service.impl;
 import com.innowise.userservice.exception.DuplicateEmailException;
 import com.innowise.userservice.exception.ResourceNotFoundException;
 import com.innowise.userservice.mapper.UserMapper;
+import com.innowise.userservice.model.dto.card.CardInfoDTO;
+import com.innowise.userservice.model.dto.card.UserWithCardsDTO;
 import com.innowise.userservice.model.dto.user.UserCreateRequest;
 import com.innowise.userservice.model.dto.user.UserResponse;
 import com.innowise.userservice.model.dto.user.UserUpdateRequest;
@@ -11,6 +13,8 @@ import com.innowise.userservice.repository.UserRepository;
 import com.innowise.userservice.repository.specification.UserSpecification;
 import com.innowise.userservice.service.UserService;
 import lombok.AllArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -53,6 +57,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @CacheEvict(value = "userWithCards", key = "#id")
     @Transactional
     public UserResponse updateUser(Long id, UserUpdateRequest request) {
         if (id == null) {
@@ -73,6 +78,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @CacheEvict(value = "userWithCards", key = "#id")
     @Transactional
     public void deleteUser(Long id) {
         if (id == null) {
@@ -84,10 +90,10 @@ public class UserServiceImpl implements UserService {
         }
 
         userRepository.deleteById(id);
-
     }
 
     @Override
+    @CacheEvict(value = "userWithCards", key = "#id")
     @Transactional
     public void activateUserStatus(Long id) {
         if (id == null) {
@@ -101,6 +107,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @CacheEvict(value = "userWithCards", key = "#id")
     @Transactional
     public void deactivateUserStatus(Long id) {
         if (id == null) {
@@ -126,12 +133,20 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Cacheable(value = "userWithCards", key = "#id")
     @Transactional(readOnly = true)
-    public UserResponse getUserWithCards(Long id){
+    public UserWithCardsDTO getUserWithCards(Long id){
         User user = userRepository.findUsersWithPaymentCards(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
 
-        return userMapper.toDto(user);
-    }
+        List<CardInfoDTO> cards = user.getPaymentCards().stream()
+                .map(card -> new CardInfoDTO(card.getId(), card.getNumber(),
+                        card.getHolder(), card.isActive()))
+                .toList();
 
+        return new UserWithCardsDTO(
+                user.getId(), user.getName(), user.getSurname(),
+                user.getEmail(), user.isActive(), cards
+        );
+    }
 }

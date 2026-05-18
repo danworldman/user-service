@@ -1,5 +1,6 @@
 package com.innowise.userservice.controller;
 
+import com.innowise.userservice.model.dto.card.UserWithCardsDTO;
 import com.innowise.userservice.model.dto.user.UserCreateRequest;
 import com.innowise.userservice.model.dto.user.UserResponse;
 import com.innowise.userservice.model.dto.user.UserUpdateRequest;
@@ -9,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,43 +21,48 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public UserResponse createUser(@Valid @RequestBody UserCreateRequest request) {
-        return userService.createUser(request);
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(request));
     }
 
     @GetMapping("/{id}")
-    public UserResponse getUserById(@PathVariable Long id) {
-        return userService.getUserById(id);
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @PutMapping("/{id}")
-    public UserResponse updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest request) {
-        return userService.updateUser(id, request);
+    public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest request) {
+        return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/activate")
-    public void activateUserStatus(@PathVariable Long id) {
+    public ResponseEntity<Void> activateUserStatus(@PathVariable Long id) {
         userService.activateUserStatus(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/deactivate")
-    public void deactivateUserStatus(@PathVariable Long id) {
+    public ResponseEntity<Void> deactivateUserStatus(@PathVariable Long id) {
         userService.deactivateUserStatus(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping
-    public Page<UserResponse> getAllUsers(@RequestParam(required = false) String name,
-                                          @RequestParam(required = false) String surname,
-                                          @PageableDefault(size = 10) Pageable pageable) {
-        return userService.getAllUsers(name, surname, pageable);
+    public ResponseEntity<Page<UserResponse>> getAllUsers(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String surname,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(userService.getAllUsers(name, surname, pageable));
     }
 
-    @GetMapping("/{id}/with-cards")    public UserResponse getUserWithCards(@PathVariable Long id){
-        return userService.getUserWithCards(id);
+    @GetMapping("/{id}/with-cards")
+    public ResponseEntity<UserWithCardsDTO> getUserWithCards(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getUserWithCards(id));
     }
 }

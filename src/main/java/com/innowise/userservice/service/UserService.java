@@ -1,5 +1,6 @@
 package com.innowise.userservice.service;
 
+import com.innowise.userservice.model.dto.card.UserWithCardsDTO;
 import com.innowise.userservice.model.dto.user.UserCreateRequest;
 import com.innowise.userservice.model.dto.user.UserResponse;
 import com.innowise.userservice.model.dto.user.UserUpdateRequest;
@@ -21,5 +22,5 @@ public interface UserService {
 
     Page<UserResponse> getAllUsers(String name, String surname, Pageable pageable);
 
-    UserResponse getUserWithCards(Long id);
+    UserWithCardsDTO getUserWithCards(Long id);
 }
