@@ -30,6 +30,18 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
 
     @Override
+    @Transactional(readOnly = true)
+    public UserResponse getUserById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("User's id cannot be null");
+        }
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        return userMapper.toDto(user);
+    }
+
+    @Override
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
         if (request == null) {
@@ -42,18 +54,6 @@ public class UserServiceImpl implements UserService {
         User user = userMapper.toEntity(request);
         User saveUser = userRepository.save(user);
         return userMapper.toDto(saveUser);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public UserResponse getUserById(Long id) {
-        if (id == null) {
-            throw new IllegalArgumentException("User's id cannot be null");
-        }
-
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-        return userMapper.toDto(user);
     }
 
     @Override
