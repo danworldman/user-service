@@ -31,6 +31,15 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     private final CacheManager cacheManager;
 
     @Override
+    @Transactional(readOnly = true)
+    public CardResponse getById(Long id) {
+        PaymentCard paymentCard = paymentCardRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment card not found with id: " + id));
+
+        return paymentCardMapper.toDto(paymentCard);
+    }
+
+    @Override
     @CacheEvict(value = "userWithCards", key = "#result.userId()")
     @Transactional
     public CardResponse create(CardCreateRequest request) {
@@ -49,15 +58,6 @@ public class PaymentCardServiceImpl implements PaymentCardService {
         paymentCard.setUser(user);
         PaymentCard savedPaymentCard = paymentCardRepository.save(paymentCard);
         return paymentCardMapper.toDto(savedPaymentCard);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public CardResponse getById(Long id) {
-        PaymentCard paymentCard = paymentCardRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Payment card not found with id: " + id));
-
-        return paymentCardMapper.toDto(paymentCard);
     }
 
     @Override
