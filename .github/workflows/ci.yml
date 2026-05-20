@@ -2,7 +2,7 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ "main","tasks/USR-0" ]
+    branches: [ "main", "tasks/USR-0" ]
   pull_request:
     branches: [ "main" ]
 
@@ -35,6 +35,11 @@ jobs:
 
       - name: Build and Test
         run: ./gradlew build
+
+      - name: SonarQube analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew sonar -Dsonar.projectKey=danworldman_user-service -Dsonar.organization=danworldman -Dsonar.host.url=https://sonarcloud.io -Dsonar.token=$SONAR_TOKEN
 
       - name: Build Docker image
         run: docker build -t user-service:latest .

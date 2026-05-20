@@ -36,6 +36,10 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("User's id cannot be null");
         }
 
+        if (id <= 0) {
+            throw new IllegalArgumentException("User id must be positive");
+        }
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         return userMapper.toDto(user);
@@ -71,6 +75,20 @@ public class UserServiceImpl implements UserService {
             if (userRepository.existsByEmail(request.email())){
                 throw new DuplicateEmailException("This email already exists: " + request.email());
             }
+        }
+
+        if (request.name() != null) {
+            if (request.name().isBlank()) {
+                throw new IllegalArgumentException("Name cannot be blank");
+            }
+            user.setName(request.name());
+        }
+
+        if (request.surname() != null) {
+            if (request.surname().isBlank()) {
+                throw new IllegalArgumentException("Surname cannot be blank");
+            }
+            user.setSurname(request.surname());
         }
 
         userMapper.updateEntity(request, user);
