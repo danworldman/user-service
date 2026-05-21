@@ -83,6 +83,7 @@ public class UserServiceImplTest {
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> userService.getUserById(userId));
+
         verify(userRepository).findById(userId);
         verifyNoMoreInteractions(userRepository);
         verify(userMapper, never()).toDto(any());
@@ -180,6 +181,7 @@ public class UserServiceImplTest {
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> userService.updateUser(userId, userUpdateRequest));
+
         verify(userRepository).findById(userId);
     }
 

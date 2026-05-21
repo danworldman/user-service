@@ -65,12 +65,13 @@ public class User {
     @Override
     public final boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof User user)) return false;
-        return email != null && email.equals(user.getEmail());
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return getEmail() != null && getEmail().equals(user.getEmail());
     }
 
     @Override
     public final int hashCode() {
-        return Objects.hash(email);
+        return Objects.hash(getEmail());
     }
 }

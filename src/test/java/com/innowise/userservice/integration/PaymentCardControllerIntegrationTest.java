@@ -134,7 +134,12 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
 
         for (int i = 1; i <= 5; i++) {
             CardCreateRequest cardRequest = createCardRequestWithNumber(userId, "111122223333444" + i);
-            ResponseEntity<CardResponse> response = restTemplate.postForEntity(cardsUrl(), cardRequest, CardResponse.class);
+            ResponseEntity<CardResponse> response = restTemplate.postForEntity(
+                    cardsUrl(),
+                    cardRequest,
+                    CardResponse.class
+            );
+
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         }
 
@@ -160,6 +165,34 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
                 "1234",
                 "Bob Duck",
                 LocalDate.of(2030, 1, 1)
+        );
+
+        assertThatThrownBy(() -> restTemplate.postForEntity(cardsUrl(), createRequest, CardResponse.class))
+                .isInstanceOf(HttpClientErrorException.BadRequest.class);
+    }
+
+    @Test
+    void createCard_shouldReturnBadRequest_withEmptyHolder() {
+        Long userId = createTestUser();
+        CardCreateRequest createRequest = new CardCreateRequest(
+                userId,
+                "1111222233334444",
+                "",
+                LocalDate.of(2030, 1, 1)
+        );
+
+        assertThatThrownBy(() -> restTemplate.postForEntity(cardsUrl(), createRequest, CardResponse.class))
+                .isInstanceOf(HttpClientErrorException.BadRequest.class);
+    }
+
+    @Test
+    void createCard_shouldReturnBadRequest_withPastExpirationDate() {
+        Long userId = createTestUser();
+        CardCreateRequest createRequest = new CardCreateRequest(
+                userId,
+                "1111222233334444",
+                "Bob Duck",
+                LocalDate.of(2000, 1, 1)
         );
 
         assertThatThrownBy(() -> restTemplate.postForEntity(cardsUrl(), createRequest, CardResponse.class))
@@ -197,6 +230,35 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
         assertThat(updateResponse.getBody()).isNotNull();
         assertThat(updateResponse.getBody().number()).isEqualTo("3333444455556666");
         assertThat(updateResponse.getBody().holder()).isEqualTo("Bob Duck");
+    }
+
+    @Test
+    void updateCard_shouldReturnBadRequest_withPastExpirationDate() {
+        Long userId = createTestUser();
+        CardCreateRequest createRequest = createCardRequest(userId);
+        ResponseEntity<CardResponse> createResponse = restTemplate.postForEntity(
+                cardsUrl(),
+                createRequest,
+                CardResponse.class
+        );
+
+        assertThat(createResponse.getBody()).isNotNull();
+        Long cardId = createResponse.getBody().id();
+
+        CardUpdateRequest update = new CardUpdateRequest(
+                null,
+                null,
+                LocalDate.of(2000, 1, 1)
+        );
+
+        HttpEntity<CardUpdateRequest> entity = new HttpEntity<>(update);
+
+        assertThatThrownBy(() -> restTemplate.exchange(
+                cardsUrl() + "/" + cardId,
+                HttpMethod.PATCH,
+                entity,
+                Void.class
+        )).isInstanceOf(HttpClientErrorException.BadRequest.class);
     }
 
     @Test
