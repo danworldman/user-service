@@ -12,6 +12,7 @@ import com.innowise.userservice.repository.PaymentCardRepository;
 import com.innowise.userservice.repository.UserRepository;
 import com.innowise.userservice.service.PaymentCardService;
 import lombok.AllArgsConstructor;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
@@ -33,6 +34,8 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     @Override
     @Transactional(readOnly = true)
     public CardResponse getById(Long id) {
+        validateId(id);
+
         PaymentCard paymentCard = paymentCardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment card not found with id: " + id));
 
@@ -43,11 +46,14 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     @CacheEvict(value = "userWithCards", key = "#result.userId()")
     @Transactional
     public CardResponse create(CardCreateRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request cannot be null");
+        }
         if (request.userId() == null) {
             throw new IllegalArgumentException("User's id cannot be null");
         }
 
-        User user = userRepository.findById(request.userId())
+        User user = userRepository.findUsersWithPaymentCards(request.userId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + request.userId()));
 
         if (paymentCardRepository.countByUserId(user.getId()) >= 5) {
@@ -64,10 +70,13 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     @CacheEvict(value = "userWithCards", key = "#result.userId()")
     @Transactional
     public CardResponse update(Long id, CardUpdateRequest request) {
+        validateId(id);
+
         PaymentCard paymentCard = paymentCardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment card not found with id: " + id));
 
         paymentCardMapper.updateEntity(request, paymentCard);
+        paymentCardRepository.flush();
 
         return paymentCardMapper.toDto(paymentCard);
     }
@@ -75,54 +84,65 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     @Override
     @Transactional
     public void delete(Long id) {
+        validateId(id);
+
         PaymentCard paymentCard = paymentCardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment card not found with id: " + id));
+
         Long userId = paymentCard.getUser().getId();
         paymentCardRepository.delete(paymentCard);
-        cacheManager.getCache("userWithCards").evict(userId);
+        evictUserCache(userId);
     }
 
     @Override
     @Transactional
     public void activatePaymentCardStatus(Long id) {
+        validateId(id);
+
         PaymentCard paymentCard = paymentCardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment card not found with id: " + id));
+
         Long userId = paymentCard.getUser().getId();
         int updated = paymentCardRepository.updateCardActiveStatus(id, true);
         if (updated == 0) {
             throw new ResourceNotFoundException("Payment card not found with id: " + id);
         }
-        cacheManager.getCache("userWithCards").evict(userId);
+        evictUserCache(userId);
     }
 
     @Override
     @Transactional
     public void deactivatePaymentCardStatus(Long id) {
+        validateId(id);
+
         PaymentCard paymentCard = paymentCardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment card not found with id: " + id));
+
         Long userId = paymentCard.getUser().getId();
         int updated = paymentCardRepository.updateCardActiveStatus(id, false);
         if (updated == 0) {
             throw new ResourceNotFoundException("Payment card not found with id: " + id);
         }
-        cacheManager.getCache("userWithCards").evict(userId);
+        evictUserCache(userId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CardResponse> getCardsByUserId(Long userId, Pageable pageable) {
+        validateId(userId);
+
         if (!userRepository.existsById(userId)) {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
         Page<PaymentCard> paymentCardPage = paymentCardRepository.findByUserId(userId, pageable);
-
         return paymentCardPage.map(paymentCardMapper::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CardResponse> getActivePaymentCardsByUserId(Long userId) {
+        validateId(userId);
         if (!userRepository.existsById(userId)) {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
@@ -131,5 +151,21 @@ public class PaymentCardServiceImpl implements PaymentCardService {
                 .stream()
                 .map(paymentCardMapper::toDto)
                 .toList();
+    }
+
+    private void validateId(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Id cannot be null");
+        }
+        if (id <= 0) {
+            throw new IllegalArgumentException("Id must be positive");
+        }
+    }
+
+    private void evictUserCache(Long userId) {
+        Cache cache = cacheManager.getCache("userWithCards");
+        if (cache != null) {
+            cache.evict(userId);
+        }
     }
 }

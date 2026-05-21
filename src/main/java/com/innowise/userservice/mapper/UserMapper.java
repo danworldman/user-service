@@ -11,6 +11,7 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface UserMapper {
+
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "active", constant = "true")
     @Mapping(target = "createdAt", ignore = true)

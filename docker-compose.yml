@@ -6,29 +6,31 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-    volumes:
-      - gradle-cache:/root/.gradle
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-danworldman}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-user}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+
   db:
     container_name: user-db
     image: postgres:17
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=user_db
-      - POSTGRES_USER=danworldman
-      - POSTGRES_PASSWORD=user
+      - POSTGRES_DB=${DB_NAME:-user_db}
+      - POSTGRES_USER=${DB_USER:-danworldman}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-user}
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U danworldman -d user_db" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-danworldman} -d ${DB_NAME:-user_db}" ]
       interval: 5s
       timeout: 3s
       retries: 5
+
   redis:
     container_name: user-redis
     image: redis:7-alpine
@@ -42,4 +44,3 @@ services:
 
 volumes:
   db-data:
-  gradle-cache:

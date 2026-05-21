@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class UserSpecification {
+
     public static Specification<User> hasName(String name) {
         return (root, query, criteriaBuilder) -> {
             if (name == null || name.isBlank()) {
@@ -41,7 +42,8 @@ public class UserSpecification {
 
             return criteriaBuilder.equal(
                     criteriaBuilder.lower(root.get("email")),
-                    email.trim().toLowerCase());
+                    email.trim().toLowerCase()
+            );
         };
     }
 

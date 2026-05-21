@@ -26,19 +26,14 @@ import java.util.List;
 @Service
 @AllArgsConstructor
 public class UserServiceImpl implements UserService {
+
     private final UserRepository userRepository;
     private final UserMapper userMapper;
 
     @Override
     @Transactional(readOnly = true)
     public UserResponse getUserById(Long id) {
-        if (id == null) {
-            throw new IllegalArgumentException("User's id cannot be null");
-        }
-
-        if (id <= 0) {
-            throw new IllegalArgumentException("User id must be positive");
-        }
+        validateID(id);
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
@@ -64,31 +59,22 @@ public class UserServiceImpl implements UserService {
     @CacheEvict(value = "userWithCards", key = "#id")
     @Transactional
     public UserResponse updateUser(Long id, UserUpdateRequest request) {
-        if (id == null) {
-            throw new IllegalArgumentException("User's id cannot be null");
-        }
+        validateID(id);
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
 
-        if (request.email() != null && !request.email().equals(user.getEmail())){
-            if (userRepository.existsByEmail(request.email())){
+        if (request.email() != null && !request.email().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.email())) {
                 throw new DuplicateEmailException("This email already exists: " + request.email());
             }
         }
 
-        if (request.name() != null) {
-            if (request.name().isBlank()) {
-                throw new IllegalArgumentException("Name cannot be blank");
-            }
-            user.setName(request.name());
+        if (request.name() != null && request.name().isBlank()) {
+            throw new IllegalArgumentException("Name cannot be blank");
         }
-
-        if (request.surname() != null) {
-            if (request.surname().isBlank()) {
-                throw new IllegalArgumentException("Surname cannot be blank");
-            }
-            user.setSurname(request.surname());
+        if (request.surname() != null && request.surname().isBlank()) {
+            throw new IllegalArgumentException("Surname cannot be blank");
         }
 
         userMapper.updateEntity(request, user);
@@ -99,9 +85,7 @@ public class UserServiceImpl implements UserService {
     @CacheEvict(value = "userWithCards", key = "#id")
     @Transactional
     public void deleteUser(Long id) {
-        if (id == null) {
-            throw new IllegalArgumentException("User's id cannot be null");
-        }
+        validateID(id);
 
         if (!userRepository.existsById(id)) {
             throw new ResourceNotFoundException("User not found with id: " + id);
@@ -114,9 +98,7 @@ public class UserServiceImpl implements UserService {
     @CacheEvict(value = "userWithCards", key = "#id")
     @Transactional
     public void activateUserStatus(Long id) {
-        if (id == null) {
-            throw new IllegalArgumentException("User's id cannot be null");
-        }
+        validateID(id);
 
         int resultOfUpdate = userRepository.updateStatus(id, true);
         if (resultOfUpdate == 0) {
@@ -128,9 +110,7 @@ public class UserServiceImpl implements UserService {
     @CacheEvict(value = "userWithCards", key = "#id")
     @Transactional
     public void deactivateUserStatus(Long id) {
-        if (id == null) {
-            throw new IllegalArgumentException("User's id cannot be null");
-        }
+        validateID(id);
 
         int resultOfUpdate = userRepository.updateStatus(id, false);
         if (resultOfUpdate == 0) {
@@ -153,18 +133,34 @@ public class UserServiceImpl implements UserService {
     @Override
     @Cacheable(value = "userWithCards", key = "#id")
     @Transactional(readOnly = true)
-    public UserWithCardsDTO getUserWithCards(Long id){
+    public UserWithCardsDTO getUserWithCards(Long id) {
+        validateID(id);
+
         User user = userRepository.findUsersWithPaymentCards(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
 
         List<CardInfoDTO> cards = user.getPaymentCards().stream()
-                .map(card -> new CardInfoDTO(card.getId(), card.getNumber(),
-                        card.getHolder(), card.isActive()))
+                .map(card -> new CardInfoDTO(
+                        card.getId(),
+                        card.getNumber(),
+                        card.getHolder(),
+                        card.isActive()
+                ))
                 .toList();
 
         return new UserWithCardsDTO(
                 user.getId(), user.getName(), user.getSurname(),
                 user.getEmail(), user.isActive(), cards
         );
+    }
+
+    private void validateID(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("User's id cannot be null");
+        }
+
+        if (id <= 0) {
+            throw new IllegalArgumentException("User id must be positive");
+        }
     }
 }

@@ -47,54 +47,62 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     private Long createTestUser() {
-        UserCreateRequest userRequest = new UserCreateRequest("Bob", "Duck", "bob@email.com", LocalDate.of(2000, 1, 1));
-        ResponseEntity<UserResponse> responseEntity = restTemplate.postForEntity(usersUrl(), userRequest, UserResponse.class);
+        UserCreateRequest userRequest = new UserCreateRequest(
+                "Bob",
+                "Duck",
+                "bob@email.com",
+                LocalDate.of(2000, 1, 1)
+        );
+
+        ResponseEntity<UserResponse> responseEntity = restTemplate.postForEntity(
+                usersUrl(),
+                userRequest,
+                UserResponse.class
+        );
+
+        assertThat(responseEntity.getBody()).isNotNull();
         return responseEntity.getBody().id();
     }
 
-    @Test
-    void createCard_shouldReturnCreatedCard() {
-        Long userId = createTestUser();
-        CardCreateRequest createRequest = new CardCreateRequest(userId, "1111-2222", "Bob Duck", LocalDate.of(2030, 1, 1));
-
-        ResponseEntity<CardResponse> createResponse = restTemplate.postForEntity(cardsUrl(), createRequest, CardResponse.class);
-
-        assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(createResponse.getBody().id()).isPositive();
-        assertThat(createResponse.getBody().number()).isEqualTo("1111-2222");
-        assertThat(createResponse.getBody().isActive()).isTrue();
+    private CardCreateRequest createCardRequest(Long userId) {
+        return new CardCreateRequest(
+                userId,
+                "1111222233334444",
+                "Bob Duck",
+                LocalDate.of(2030, 1, 1)
+        );
     }
 
-    @Test
-    void createCard_shouldReturnBadRequest_whenUserHasAlreadyFiveCards() {
-        Long userId = createTestUser();
-        for (int i = 1; i <= 5; i++) {
-            CardCreateRequest cardRequest = new CardCreateRequest(userId, "card" + i, "Bob Duck", LocalDate.of(2030, 1, 1));
-            restTemplate.postForEntity(cardsUrl(), cardRequest, CardResponse.class);
-        }
-        CardCreateRequest sixthRequest = new CardCreateRequest(userId, "sixth", "Bob Duck", LocalDate.of(2030, 1, 1));
-        assertThatThrownBy(() -> restTemplate.postForEntity(cardsUrl(), sixthRequest, CardResponse.class))
-                .isInstanceOf(HttpClientErrorException.BadRequest.class);
-    }
-
-    @Test
-    void createCard_shouldReturnNotFound_whenUserDoesNotExist() {
-        CardCreateRequest createRequest = new CardCreateRequest(10000L, "1111-2222", "Bob Duck", LocalDate.of(2030, 1, 1));
-        assertThatThrownBy(() -> restTemplate.postForEntity(cardsUrl(), createRequest, CardResponse.class))
-                .isInstanceOf(HttpClientErrorException.NotFound.class);
+    private CardCreateRequest createCardRequestWithNumber(Long userId, String number) {
+        return new CardCreateRequest(
+                userId,
+                number,
+                "Bob Duck",
+                LocalDate.of(2030, 1, 1)
+        );
     }
 
     @Test
     void getCardById_shouldReturnCard_whenExists() {
         Long userId = createTestUser();
-        CardCreateRequest createRequest = new CardCreateRequest(userId, "3333-4444", "Bob Duck", LocalDate.of(2030, 1, 1));
-        ResponseEntity<CardResponse> createResponse = restTemplate.postForEntity(cardsUrl(), createRequest, CardResponse.class);
+        CardCreateRequest createRequest = createCardRequestWithNumber(userId, "3333444455556666");
+        ResponseEntity<CardResponse> createResponse = restTemplate.postForEntity(
+                cardsUrl(),
+                createRequest,
+                CardResponse.class
+        );
+
+        assertThat(createResponse.getBody()).isNotNull();
         Long cardId = createResponse.getBody().id();
 
-        ResponseEntity<CardResponse> getResponse = restTemplate.getForEntity(cardsUrl() + "/" + cardId, CardResponse.class);
+        ResponseEntity<CardResponse> getResponse = restTemplate.getForEntity(
+                cardsUrl() + "/" + cardId,
+                CardResponse.class
+        );
 
         assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(getResponse.getBody().number()).isEqualTo("3333-4444");
+        assertThat(getResponse.getBody()).isNotNull();
+        assertThat(getResponse.getBody().number()).isEqualTo("3333444455556666");
     }
 
     @Test
@@ -104,29 +112,98 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void createCard_shouldReturnCreatedCard() {
+        Long userId = createTestUser();
+        CardCreateRequest createRequest = createCardRequest(userId);
+        ResponseEntity<CardResponse> createResponse = restTemplate.postForEntity(
+                cardsUrl(),
+                createRequest,
+                CardResponse.class
+        );
+
+        assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(createResponse.getBody()).isNotNull();
+        assertThat(createResponse.getBody().id()).isPositive();
+        assertThat(createResponse.getBody().number()).isEqualTo("1111222233334444");
+        assertThat(createResponse.getBody().isActive()).isTrue();
+    }
+
+    @Test
+    void createCard_shouldReturnBadRequest_whenUserHasAlreadyFiveCards() {
+        Long userId = createTestUser();
+
+        for (int i = 1; i <= 5; i++) {
+            CardCreateRequest cardRequest = createCardRequestWithNumber(userId, "111122223333444" + i);
+            ResponseEntity<CardResponse> response = restTemplate.postForEntity(cardsUrl(), cardRequest, CardResponse.class);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        }
+
+        CardCreateRequest sixthRequest = createCardRequestWithNumber(userId, "6666666666666666");
+
+        assertThatThrownBy(() -> restTemplate.postForEntity(cardsUrl(), sixthRequest, CardResponse.class))
+                .isInstanceOf(HttpClientErrorException.BadRequest.class);
+    }
+
+    @Test
+    void createCard_shouldReturnNotFound_whenUserDoesNotExist() {
+        CardCreateRequest createRequest = createCardRequest(10000L);
+
+        assertThatThrownBy(() -> restTemplate.postForEntity(cardsUrl(), createRequest, CardResponse.class))
+                .isInstanceOf(HttpClientErrorException.NotFound.class);
+    }
+
+    @Test
     void updateCard_shouldUpdateAndReturnCard() {
         Long userId = createTestUser();
-        CardCreateRequest createRequest = new CardCreateRequest(userId, "1111-2222", "Bob Duck", LocalDate.of(2030, 1, 1));
-        ResponseEntity<CardResponse> createResponse = restTemplate.postForEntity(cardsUrl(), createRequest, CardResponse.class);
+        CardCreateRequest createRequest = createCardRequest(userId);
+        ResponseEntity<CardResponse> createResponse = restTemplate.postForEntity(
+                cardsUrl(),
+                createRequest,
+                CardResponse.class
+        );
+
+        assertThat(createResponse.getBody()).isNotNull();
         Long cardId = createResponse.getBody().id();
 
-        CardUpdateRequest updateRequest = new CardUpdateRequest("3333-4444", "Bob Duck", LocalDate.of(2030, 1, 1));
+        CardUpdateRequest updateRequest = new CardUpdateRequest(
+                "3333444455556666",
+                "Bob Duck",
+                LocalDate.of(2030, 1, 1)
+        );
+
         HttpEntity<CardUpdateRequest> entity = new HttpEntity<>(updateRequest);
-        ResponseEntity<CardResponse> updateResponse = restTemplate.exchange(cardsUrl() + "/" + cardId, HttpMethod.PATCH, entity, CardResponse.class);
+        ResponseEntity<CardResponse> updateResponse = restTemplate.exchange(
+                cardsUrl() + "/" + cardId,
+                HttpMethod.PATCH,
+                entity,
+                CardResponse.class
+        );
 
         assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(updateResponse.getBody().number()).isEqualTo("3333-4444");
+        assertThat(updateResponse.getBody()).isNotNull();
+        assertThat(updateResponse.getBody().number()).isEqualTo("3333444455556666");
         assertThat(updateResponse.getBody().holder()).isEqualTo("Bob Duck");
     }
 
     @Test
     void deleteCard_shouldReturnNoContent() {
         Long userId = createTestUser();
-        CardCreateRequest createRequest = new CardCreateRequest(userId, "1111-2222", "Bob Duck", LocalDate.of(2030, 1, 1));
-        ResponseEntity<CardResponse> createResponse = restTemplate.postForEntity(cardsUrl(), createRequest, CardResponse.class);
+        CardCreateRequest createRequest = createCardRequest(userId);
+        ResponseEntity<CardResponse> createResponse = restTemplate.postForEntity(
+                cardsUrl(),
+                createRequest,
+                CardResponse.class
+        );
+
+        assertThat(createResponse.getBody()).isNotNull();
         Long cardId = createResponse.getBody().id();
 
-        ResponseEntity<Void> deleteResponse = restTemplate.exchange(cardsUrl() + "/" + cardId, HttpMethod.DELETE, null, Void.class);
+        ResponseEntity<Void> deleteResponse = restTemplate.exchange(
+                cardsUrl() + "/" + cardId,
+                HttpMethod.DELETE,
+                null,
+                Void.class
+        );
 
         assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         assertThatThrownBy(() -> restTemplate.getForEntity(cardsUrl() + "/" + cardId, CardResponse.class))
@@ -136,29 +213,53 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void activateCard_shouldActivateCard() {
         Long userId = createTestUser();
-        CardCreateRequest createRequest = new CardCreateRequest(userId, "1111-2222", "Bob Duck", LocalDate.of(2030, 1, 1));
-        ResponseEntity<CardResponse> createResponse = restTemplate.postForEntity(cardsUrl(), createRequest, CardResponse.class);
+        CardCreateRequest createRequest = createCardRequest(userId);
+        ResponseEntity<CardResponse> createResponse = restTemplate.postForEntity(
+                cardsUrl(),
+                createRequest,
+                CardResponse.class
+        );
+
+        assertThat(createResponse.getBody()).isNotNull();
         Long cardId = createResponse.getBody().id();
 
-        restTemplate.exchange(cardsUrl() + "/" + cardId + "/deactivate", HttpMethod.PATCH, null, Void.class);
-        ResponseEntity<Void> activateResponse = restTemplate.exchange(cardsUrl() + "/" + cardId + "/activate", HttpMethod.PATCH, null, Void.class);
+        restTemplate.exchange(
+                cardsUrl() + "/" + cardId + "/deactivate",
+                HttpMethod.PATCH,
+                null,
+                Void.class
+        );
+
+        ResponseEntity<Void> activateResponse = restTemplate.exchange(
+                cardsUrl() + "/" + cardId + "/activate",
+                HttpMethod.PATCH,
+                null,
+                Void.class
+        );
 
         assertThat(activateResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        ResponseEntity<CardResponse> getResponse = restTemplate.getForEntity(cardsUrl() + "/" + cardId, CardResponse.class);
+        ResponseEntity<CardResponse> getResponse = restTemplate.getForEntity(
+                cardsUrl() + "/" + cardId,
+                CardResponse.class
+        );
+
+        assertThat(getResponse.getBody()).isNotNull();
         assertThat(getResponse.getBody().isActive()).isTrue();
     }
 
     @Test
     void getCardsByUser_shouldReturnPageOfCards() {
         Long userId = createTestUser();
+
         for (int i = 1; i <= 3; i++) {
-            CardCreateRequest cardRequest = new CardCreateRequest(userId, "card" + i, "Bob Duck", LocalDate.of(2030, 1, 1));
+            CardCreateRequest cardRequest = createCardRequestWithNumber(userId, "111122223333444" + i);
             restTemplate.postForEntity(cardsUrl(), cardRequest, CardResponse.class);
         }
 
         ResponseEntity<String> pageResponse = restTemplate.getForEntity(
                 cardsUrl() + "/user/" + userId + "?page=0&size=2",
-                String.class);
+                String.class
+        );
 
         assertThat(pageResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(pageResponse.getBody()).contains("\"totalElements\":3");
@@ -168,14 +269,28 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void getActiveCardsByUser_shouldReturnListOfActiveCards() {
         Long userId = createTestUser();
-        CardCreateRequest activeRequest = new CardCreateRequest(userId, "1111-2222", "Bob Duck", LocalDate.of(2030, 1, 1));
+        CardCreateRequest activeRequest = createCardRequest(userId);
         restTemplate.postForEntity(cardsUrl(), activeRequest, CardResponse.class);
 
-        CardCreateRequest inactiveRequest = new CardCreateRequest(userId, "3333-4444", "Bob Duck", LocalDate.of(2030, 1, 1));
-        ResponseEntity<CardResponse> inactiveResponse = restTemplate.postForEntity(cardsUrl(), inactiveRequest, CardResponse.class);
-        restTemplate.exchange(cardsUrl() + "/" + inactiveResponse.getBody().id() + "/deactivate", HttpMethod.PATCH, null, Void.class);
+        CardCreateRequest inactiveRequest = createCardRequestWithNumber(userId, "3333444455556666");
+        ResponseEntity<CardResponse> inactiveResponse = restTemplate.postForEntity(
+                cardsUrl(),
+                inactiveRequest,
+                CardResponse.class
+        );
 
-        ResponseEntity<CardResponse[]> getResponse = restTemplate.getForEntity(cardsUrl() + "/user/" + userId + "/active", CardResponse[].class);
+        assertThat(inactiveResponse.getBody()).isNotNull();
+        restTemplate.exchange(
+                cardsUrl() + "/" + inactiveResponse.getBody().id() + "/deactivate",
+                HttpMethod.PATCH,
+                null,
+                Void.class
+        );
+
+        ResponseEntity<CardResponse[]> getResponse = restTemplate.getForEntity(
+                cardsUrl() + "/user/" + userId + "/active",
+                CardResponse[].class
+        );
 
         assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(getResponse.getBody()).hasSize(1);
@@ -184,18 +299,25 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void getUserWithCards_cacheShouldBeInvalidatedAfterCardCreation() {
-        UserCreateRequest userRequest = new UserCreateRequest("Bob", "Duck", "bob@email.com", LocalDate.of(2000, 1, 1));
-        ResponseEntity<UserResponse> userResponse = restTemplate.postForEntity(usersUrl(), userRequest, UserResponse.class);
-        Long userId = userResponse.getBody().id();
+        Long userId = createTestUser();
+        ResponseEntity<UserWithCardsDTO> responseBeforeCreation = restTemplate.getForEntity(
+                usersUrl() + "/" + userId + "/with-cards",
+                UserWithCardsDTO.class
+        );
 
-        ResponseEntity<UserWithCardsDTO> responseBeforeCreation = restTemplate.getForEntity(usersUrl() + "/" + userId + "/with-cards", UserWithCardsDTO.class);
+        assertThat(responseBeforeCreation.getBody()).isNotNull();
         assertThat(responseBeforeCreation.getBody().cards()).isEmpty();
 
-        CardCreateRequest cardRequest = new CardCreateRequest(userId, "1111-2222", "Bob Duck", LocalDate.of(2030, 1, 1));
+        CardCreateRequest cardRequest = createCardRequest(userId);
         restTemplate.postForEntity(cardsUrl(), cardRequest, CardResponse.class);
 
-        ResponseEntity<UserWithCardsDTO> responseAfterCreation = restTemplate.getForEntity(usersUrl() + "/" + userId + "/with-cards", UserWithCardsDTO.class);
+        ResponseEntity<UserWithCardsDTO> responseAfterCreation = restTemplate.getForEntity(
+                usersUrl() + "/" + userId + "/with-cards",
+                UserWithCardsDTO.class
+        );
+
+        assertThat(responseAfterCreation.getBody()).isNotNull();
         assertThat(responseAfterCreation.getBody().cards()).hasSize(1);
-        assertThat(responseAfterCreation.getBody().cards().get(0).number()).isEqualTo("1111-2222");
+        assertThat(responseAfterCreation.getBody().cards().getFirst().number()).isEqualTo("1111222233334444");
     }
 }

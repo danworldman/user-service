@@ -11,11 +11,12 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface PaymentCardRepository extends JpaRepository<PaymentCard, Long> {
+
     @Query("SELECT c FROM PaymentCard c WHERE c.user.id = :userId AND c.isActive = true")
     List<PaymentCard> findActivePaymentCardsByUserId(@Param("userId") Long userId);
 
     @Modifying(clearAutomatically = true)
-    @Query(value = "UPDATE payment_cards SET active = :active WHERE id = :id", nativeQuery = true)
+    @Query(value = "UPDATE payment_cards SET active = :active, updated_at = NOW() WHERE id = :id", nativeQuery = true)
     int updateCardActiveStatus(@Param("id") Long id, @Param("active") boolean active);
 
     int countByUserId(Long id);

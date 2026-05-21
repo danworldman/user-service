@@ -28,13 +28,20 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class PaymentServiceImplTest {
+public class PaymentCardServiceImplTest {
 
     @Mock
     private PaymentCardRepository paymentCardRepository;
@@ -53,7 +60,6 @@ public class PaymentServiceImplTest {
 
     private User createUser(Long id, String name, String surname, String email, boolean isActive,
                             LocalDate birthDate, LocalDateTime createdAt, LocalDateTime updatedAt) {
-
         User user = new User();
         user.setId(id);
         user.setName(name);
@@ -84,7 +90,16 @@ public class PaymentServiceImplTest {
 
     private CardResponse createCardResponse(Long id, Long userId, String number, String holder, LocalDate expirationDate,
                                             boolean isActive, LocalDateTime createdAt, LocalDateTime updatedAt) {
-        return new CardResponse(id, userId, number, holder, expirationDate, isActive, createdAt, updatedAt);
+        return new CardResponse(
+                id,
+                userId,
+                number,
+                holder,
+                expirationDate,
+                isActive,
+                createdAt,
+                updatedAt
+        );
     }
 
     private CardCreateRequest cardCreateRequest(Long userId, String number, String holder, LocalDate expirationDate) {
@@ -140,26 +155,30 @@ public class PaymentServiceImplTest {
                 LocalDateTime.of(2026, 5, 19, 3, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
+
         CardCreateRequest cardCreateRequest = cardCreateRequest(userId, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1)
         );
+
         PaymentCard paymentCard = createPaymentCard(1L, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
                 LocalDateTime.of(2026, 1, 5, 2, 3), user
         );
+
         PaymentCard savedPaymentCard = createPaymentCard(1L, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
                 LocalDateTime.of(2026, 1, 5, 2, 3), user
         );
+
         CardResponse cardResponse = createCardResponse(1L, 1L, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
                 LocalDateTime.of(2026, 1, 5, 2, 3)
         );
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findUsersWithPaymentCards(userId)).thenReturn(Optional.of(user));
         when(paymentCardRepository.countByUserId(userId)).thenReturn(3);
         when(paymentCardMapper.toEntity(cardCreateRequest)).thenReturn(paymentCard);
         when(paymentCardRepository.save(paymentCard)).thenReturn(savedPaymentCard);
@@ -168,7 +187,7 @@ public class PaymentServiceImplTest {
         CardResponse result = paymentCardService.create(cardCreateRequest);
 
         assertEquals(result, cardResponse);
-        verify(userRepository).findById(userId);
+        verify(userRepository).findUsersWithPaymentCards(userId);
         verify(paymentCardRepository).countByUserId(userId);
         verify(paymentCardMapper).toEntity(cardCreateRequest);
         verify(paymentCardRepository).save(paymentCard);
@@ -183,16 +202,17 @@ public class PaymentServiceImplTest {
                 LocalDateTime.of(2026, 5, 19, 3, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
+
         CardCreateRequest cardCreateRequest = cardCreateRequest(userId, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1)
         );
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findUsersWithPaymentCards(userId)).thenReturn(Optional.of(user));
         when(paymentCardRepository.countByUserId(userId)).thenReturn(5);
 
         assertThrows(MaxNumberOfPaymentCardException.class, () -> paymentCardService.create(cardCreateRequest));
 
-        verify(userRepository).findById(userId);
+        verify(userRepository).findUsersWithPaymentCards(userId);
         verify(paymentCardRepository).countByUserId(userId);
         verifyNoInteractions(paymentCardMapper);
         verify(paymentCardRepository, never()).save(any());
@@ -202,17 +222,21 @@ public class PaymentServiceImplTest {
     public void update_shouldReturnCardResponse_whenCardExists() {
         Long cardId = 1L;
         CardUpdateRequest cardUpdateRequest = new CardUpdateRequest("2222-3333", "Bob Duck",
-                LocalDate.of(2030, 1, 1));
+                LocalDate.of(2030, 1, 1)
+        );
+
         User user = createUser(1L, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
+
         PaymentCard oldPaymentCard = createPaymentCard(1L, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
                 LocalDateTime.of(2026, 1, 5, 2, 3), user
         );
+
         CardResponse newCardResponse = createCardResponse(1L, 1L, "2222-3333", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
@@ -249,6 +273,7 @@ public class PaymentServiceImplTest {
                 LocalDateTime.of(2026, 5, 19, 3, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
+
         PaymentCard paymentCard = createPaymentCard(1L, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
@@ -286,6 +311,7 @@ public class PaymentServiceImplTest {
                 LocalDateTime.of(2026, 5, 19, 3, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
+
         PaymentCard paymentCard = createPaymentCard(1L, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
@@ -314,13 +340,14 @@ public class PaymentServiceImplTest {
     }
 
     @Test
-    public void deactivatePaymentCardStatus_shouldActivate_whenCardExists() {
+    public void deactivatePaymentCardStatus_shouldDeactivate_whenCardExists() {
         Long cardId = 1L;
         User user = createUser(1L, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
+
         PaymentCard paymentCard = createPaymentCard(1L, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
@@ -357,25 +384,33 @@ public class PaymentServiceImplTest {
                 LocalDateTime.of(2026, 5, 19, 3, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
+
         PaymentCard PaymentCardOne = createPaymentCard(1L, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
-                LocalDateTime.of(2026, 1, 5, 2, 3), user);
+                LocalDateTime.of(2026, 1, 5, 2, 3), user
+        );
+
         PaymentCard PaymentCardTwo = createPaymentCard(2L, "3333-4444", "Bob Duck",
                 LocalDate.of(2031, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
-                LocalDateTime.of(2026, 1, 5, 2, 3), user);
+                LocalDateTime.of(2026, 1, 5, 2, 3), user
+        );
+
         List<PaymentCard> cards = List.of(PaymentCardOne, PaymentCardTwo);
         Page<PaymentCard> cardPage = new PageImpl<>(cards, pageable, 2);
 
         CardResponse CardResponseNumberOne = createCardResponse(1L, userId, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
-                LocalDateTime.of(2026, 1, 5, 2, 3));
+                LocalDateTime.of(2026, 1, 5, 2, 3)
+        );
+
         CardResponse CardResponseNumberTwo = createCardResponse(2L, userId, "3333-4444", "Bob Duck",
                 LocalDate.of(2031, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
-                LocalDateTime.of(2026, 1, 5, 2, 3));
+                LocalDateTime.of(2026, 1, 5, 2, 3)
+        );
 
         when(userRepository.existsById(userId)).thenReturn(true);
         when(paymentCardRepository.findByUserId(userId, pageable)).thenReturn(cardPage);
@@ -418,38 +453,46 @@ public class PaymentServiceImplTest {
         User user = createUser(userId, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1),
-                LocalDateTime.of(2026, 5, 19, 3, 1));
+                LocalDateTime.of(2026, 5, 19, 3, 1)
+        );
 
-        PaymentCard PaymentCardOne = createPaymentCard(1L, "1111-2222", "Bob Duck",
+        PaymentCard paymentCardOne = createPaymentCard(1L, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
-                LocalDateTime.of(2026, 1, 5, 2, 3), user);
-        PaymentCard PaymentCardTwo = createPaymentCard(2L, "3333-4444", "Bob Duck",
+                LocalDateTime.of(2026, 1, 5, 2, 3), user
+        );
+
+        PaymentCard paymentCardTwo = createPaymentCard(2L, "3333-4444", "Bob Duck",
                 LocalDate.of(2031, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
-                LocalDateTime.of(2026, 1, 5, 2, 3), user);
-        List<PaymentCard> activeCards = List.of(PaymentCardOne, PaymentCardTwo);
+                LocalDateTime.of(2026, 1, 5, 2, 3), user
+        );
 
-        CardResponse CardResponseNumberOne = createCardResponse(1L, userId, "1111-2222", "Bob Duck",
+        List<PaymentCard> activeCards = List.of(paymentCardOne, paymentCardTwo);
+
+        CardResponse cardResponseNumberOne = createCardResponse(1L, userId, "1111-2222", "Bob Duck",
                 LocalDate.of(2030, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
-                LocalDateTime.of(2026, 1, 5, 2, 3));
-        CardResponse CardResponseNumberTwo = createCardResponse(2L, userId, "3333-4444", "Bob Duck",
+                LocalDateTime.of(2026, 1, 5, 2, 3)
+        );
+
+        CardResponse cardResponseNumberTwo = createCardResponse(2L, userId, "3333-4444", "Bob Duck",
                 LocalDate.of(2031, 1, 1), true,
                 LocalDateTime.of(2026, 1, 5, 2, 3),
-                LocalDateTime.of(2026, 1, 5, 2, 3));
+                LocalDateTime.of(2026, 1, 5, 2, 3)
+        );
 
         when(userRepository.existsById(userId)).thenReturn(true);
         when(paymentCardRepository.findActivePaymentCardsByUserId(userId)).thenReturn(activeCards);
-        when(paymentCardMapper.toDto(PaymentCardOne)).thenReturn(CardResponseNumberOne);
-        when(paymentCardMapper.toDto(PaymentCardTwo)).thenReturn(CardResponseNumberTwo);
+        when(paymentCardMapper.toDto(paymentCardOne)).thenReturn(cardResponseNumberOne);
+        when(paymentCardMapper.toDto(paymentCardTwo)).thenReturn(cardResponseNumberTwo);
 
         List<CardResponse> result = paymentCardService.getActivePaymentCardsByUserId(userId);
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        assertEquals(CardResponseNumberOne, result.get(0));
-        assertEquals(CardResponseNumberTwo, result.get(1));
+        assertEquals(cardResponseNumberOne, result.get(0));
+        assertEquals(cardResponseNumberTwo, result.get(1));
         verify(userRepository).existsById(userId);
         verify(paymentCardRepository).findActivePaymentCardsByUserId(userId);
         verify(paymentCardMapper, times(2)).toDto(any(PaymentCard.class));

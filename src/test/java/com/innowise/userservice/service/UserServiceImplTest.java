@@ -28,9 +28,16 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceImplTest {
@@ -47,20 +54,17 @@ public class UserServiceImplTest {
     @Test
     public void getUserById_shouldReturnUserResponse_whenUserExists() {
         Long userId = 1L;
-        User user = new User();
-        user.setId(userId);
-        user.setName("Bob");
-        user.setSurname("Duck");
-        user.setEmail("bob@email.com");
-        user.setBirthDate(LocalDate.of(2000, 1, 1));
-        user.setActive(true);
-        user.setCreatedAt(LocalDateTime.of(2026, 5, 19, 3, 1));
-        user.setUpdatedAt(LocalDateTime.of(2026, 5, 19, 3, 1));
+        User user = createUser(userId, "Bob", "Duck", "bob@email.com", true,
+                LocalDate.of(2000, 1, 1),
+                LocalDateTime.of(2026, 5, 19, 3, 1),
+                LocalDateTime.of(2026, 5, 19, 3, 1)
+        );
 
         UserResponse userResponse = new UserResponse(userId, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1),
-                LocalDateTime.of(2026, 5, 19, 3, 1));
+                LocalDateTime.of(2026, 5, 19, 3, 1)
+        );
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userMapper.toDto(user)).thenReturn(userResponse);
@@ -87,23 +91,21 @@ public class UserServiceImplTest {
     @Test
     public void createUser_shouldReturnUserResponse() {
         Long userId = 1L;
-        User user = new User();
-        user.setId(userId);
-        user.setName("Bob");
-        user.setSurname("Duck");
-        user.setEmail("bob@email.com");
-        user.setBirthDate(LocalDate.of(2000, 1, 1));
-        user.setActive(true);
-        user.setCreatedAt(LocalDateTime.of(2026, 5, 19, 3, 1));
-        user.setUpdatedAt(LocalDateTime.of(2026, 5, 19, 3, 1));
+        User user = createUser(userId, "Bob", "Duck", "bob@email.com", true,
+                LocalDate.of(2000, 1, 1),
+                LocalDateTime.of(2026, 5, 19, 3, 1),
+                LocalDateTime.of(2026, 5, 19, 3, 1)
+        );
 
         UserCreateRequest userCreateRequest = new UserCreateRequest("Bob", "Duck", "bob@email.com",
-                LocalDate.of(2000, 1, 1));
+                LocalDate.of(2000, 1, 1)
+        );
 
         UserResponse userResponse = new UserResponse(userId, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1),
-                LocalDateTime.of(2026, 5, 19, 3, 1));
+                LocalDateTime.of(2026, 5, 19, 3, 1)
+        );
 
         when(userRepository.existsByEmail(userCreateRequest.email())).thenReturn(false);
         when(userMapper.toEntity(userCreateRequest)).thenReturn(user);
@@ -122,7 +124,8 @@ public class UserServiceImplTest {
     @Test
     public void createUser_shouldThrowDuplicateEmailException_whenEmailExists() {
         UserCreateRequest userCreateRequest = new UserCreateRequest("Bob", "Duck", "bob@email.com",
-                LocalDate.of(2000, 1, 1));
+                LocalDate.of(2000, 1, 1)
+        );
 
         when(userRepository.existsByEmail(userCreateRequest.email())).thenReturn(true);
 
@@ -143,9 +146,11 @@ public class UserServiceImplTest {
                 LocalDateTime.of(2026, 5, 19, 3, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
+
         UserUpdateRequest userUpdateRequest = new UserUpdateRequest("Bob", "Duck", "bob@email.com",
                 LocalDate.of(2020, 1, 1)
         );
+
         UserResponse newUserResponse = new UserResponse(userId, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2020, 1, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1),
@@ -290,22 +295,6 @@ public class UserServiceImplTest {
         verify(userMapper).toDto(users.get(1));
     }
 
-    private User createUser(Long id, String name, String surname, String email, boolean isActive,
-                            LocalDate birthDate, LocalDateTime createdAt, LocalDateTime updatedAt) {
-
-        User user = new User();
-        user.setId(id);
-        user.setName(name);
-        user.setSurname(surname);
-        user.setEmail(email);
-        user.setActive(isActive);
-        user.setBirthDate(birthDate);
-        user.setCreatedAt(createdAt);
-        user.setUpdatedAt(updatedAt);
-
-        return user;
-    }
-
     @Test
     public void getAllUsers_shouldReturnEmptyPage_whenNoUsersFound() {
         Pageable pageable = PageRequest.of(0, 10);
@@ -329,6 +318,7 @@ public class UserServiceImplTest {
                 LocalDateTime.of(2026, 5, 19, 3, 1),
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
+
         PaymentCard paymentCard = new PaymentCard();
         paymentCard.setId(1L);
         paymentCard.setNumber("1111-2222");
@@ -337,7 +327,9 @@ public class UserServiceImplTest {
         paymentCard.setActive(true);
         paymentCard.setUser(user);
         user.setPaymentCards(List.of(paymentCard));
+
         CardInfoDTO cardInfoDTO = new CardInfoDTO(1L, "1111-2222", "Bob Duck", true);
+
         UserWithCardsDTO userWithCardsDTO = new UserWithCardsDTO(
                 userId, "Bob", "Duck", "bob@email.com", true, List.of(cardInfoDTO)
         );
@@ -360,5 +352,21 @@ public class UserServiceImplTest {
 
         verify(userRepository).findUsersWithPaymentCards(userId);
         verifyNoMoreInteractions(userRepository);
+    }
+
+    private User createUser(Long id, String name, String surname, String email, boolean isActive,
+                            LocalDate birthDate, LocalDateTime createdAt, LocalDateTime updatedAt) {
+
+        User user = new User();
+        user.setId(id);
+        user.setName(name);
+        user.setSurname(surname);
+        user.setEmail(email);
+        user.setActive(isActive);
+        user.setBirthDate(birthDate);
+        user.setCreatedAt(createdAt);
+        user.setUpdatedAt(updatedAt);
+
+        return user;
     }
 }
