@@ -12,7 +12,7 @@ public record CardCreateRequest(
         Long userId,
 
         @NotBlank(message = "Card number is required")
-        @Pattern(regexp = "^\\d{16}$", message = "Card number must be exactly 16 digits")
+        @Pattern(regexp = "^[0-9]{16}$", message = "Card number must be exactly 16 digits")
         String number,
 
         @NotBlank(message = "Card holder name is required")

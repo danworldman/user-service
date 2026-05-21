@@ -114,6 +114,25 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void createUser_shouldReturnValidationErrors_withInvalidEmail() {
+        UserCreateRequest createRequest = new UserCreateRequest(
+                "Bob",
+                "Duck",
+                "badEmail",
+                LocalDate.of(2000, 1, 1)
+        );
+
+        assertThatThrownBy(() -> restTemplate.postForEntity(baseUrl(), createRequest, String.class))
+                .isInstanceOf(HttpClientErrorException.BadRequest.class)
+                .satisfies(ex -> {
+                    HttpClientErrorException.BadRequest exception = (HttpClientErrorException.BadRequest) ex;
+
+                    assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+                    assertThat(exception.getResponseBodyAsString()).contains("errors");
+                });
+    }
+
+    @Test
     void updateUser_shouldUpdateAndReturnUpdatedUser() {
         UserCreateRequest createRequest = createUserRequest();
         ResponseEntity<UserResponse> createResponse = restTemplate.postForEntity(
@@ -169,6 +188,25 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
                 entity,
                 Void.class
         )).isInstanceOf(HttpClientErrorException.Conflict.class);
+    }
+
+    @Test
+    void updateUser_shouldReturnBadRequest_withEmptyName() {
+        UserCreateRequest create = createUserRequest();
+        ResponseEntity<UserResponse> createResponse = restTemplate.postForEntity(baseUrl(), create, UserResponse.class);
+
+        assertThat(createResponse.getBody()).isNotNull();
+        Long userId = createResponse.getBody().id();
+
+        UserUpdateRequest updateRequest = new UserUpdateRequest("", null, null, null);
+        HttpEntity<UserUpdateRequest> entity = new HttpEntity<>(updateRequest);
+
+        assertThatThrownBy(() -> restTemplate.exchange(
+                baseUrl() + "/" + userId,
+                HttpMethod.PUT,
+                entity,
+                Void.class
+        )).isInstanceOf(HttpClientErrorException.BadRequest.class);
     }
 
     @Test

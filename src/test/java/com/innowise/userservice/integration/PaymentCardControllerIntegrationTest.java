@@ -153,6 +153,20 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void createCard_shouldReturnBadRequest_withInvalidNumberFormat() {
+        Long userId = createTestUser();
+        CardCreateRequest createRequest = new CardCreateRequest(
+                userId,
+                "1234",
+                "Bob Duck",
+                LocalDate.of(2030, 1, 1)
+        );
+
+        assertThatThrownBy(() -> restTemplate.postForEntity(cardsUrl(), createRequest, CardResponse.class))
+                .isInstanceOf(HttpClientErrorException.BadRequest.class);
+    }
+
+    @Test
     void updateCard_shouldUpdateAndReturnCard() {
         Long userId = createTestUser();
         CardCreateRequest createRequest = createCardRequest(userId);
