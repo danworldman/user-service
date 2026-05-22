@@ -52,7 +52,7 @@ public class UserServiceImplTest {
     private UserServiceImpl userService;
 
     @Test
-    public void getUserById_shouldReturnUserResponse_whenUserExists() {
+    void getUserById_shouldReturnUserResponse_whenUserExists() {
         Long userId = 1L;
         User user = createUser(userId, "Bob", "Duck", "bob@email.com", true,
                 LocalDate.of(2000, 1, 1),
@@ -77,7 +77,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void getUserById_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
+    void getUserById_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
         Long userId = 10000L;
 
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
@@ -90,7 +90,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void createUser_shouldReturnUserResponse() {
+    void createUser_shouldReturnUserResponse() {
         Long userId = 1L;
         User user = createUser(userId, "Bob", "Duck", "bob@email.com", true,
                 LocalDate.of(2000, 1, 1),
@@ -123,7 +123,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void createUser_shouldThrowDuplicateEmailException_whenEmailExists() {
+    void createUser_shouldThrowDuplicateEmailException_whenEmailExists() {
         UserCreateRequest userCreateRequest = new UserCreateRequest("Bob", "Duck", "bob@email.com",
                 LocalDate.of(2000, 1, 1)
         );
@@ -140,7 +140,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void updateUser_shouldReturnUserResponse_whenUserExists() {
+    void updateUser_shouldReturnUserResponse_whenUserExists() {
         Long userId = 1L;
         User oldUser = createUser(userId, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
@@ -172,7 +172,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void updateUser_shouldThrowResourceNotFoundException() {
+    void updateUser_shouldThrowResourceNotFoundException() {
         Long userId = 10000L;
         UserUpdateRequest userUpdateRequest = new UserUpdateRequest("Bob", "Duck", "bob@email.com",
                 LocalDate.of(2020, 1, 1)
@@ -186,7 +186,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void deleteUser_shouldReturnVoid() {
+    void deleteUser_shouldReturnVoid() {
         Long userId = 1L;
 
         when(userRepository.existsById(userId)).thenReturn(true);
@@ -198,7 +198,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void deleteUser_shouldThrowResourceNotFoundException() {
+    void deleteUser_shouldThrowResourceNotFoundException() {
         Long userId = 10000L;
 
         when(userRepository.existsById(userId)).thenReturn(false);
@@ -221,7 +221,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void activateUserStatus_shouldThrowResourceNotFoundException() {
+    void activateUserStatus_shouldThrowResourceNotFoundException() {
         Long userId = 10000L;
 
         when(userRepository.updateStatus(userId, true)).thenReturn(0);
@@ -232,7 +232,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void deactivateUserStatus_shouldReturnVoid() {
+    void deactivateUserStatus_shouldReturnVoid() {
         Long userId = 1L;
 
         when(userRepository.updateStatus(userId, false)).thenReturn(1);
@@ -243,7 +243,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void deactivateUserStatus_shouldThrowResourceNotFoundException() {
+    void deactivateUserStatus_shouldThrowResourceNotFoundException() {
         Long userId = 10000L;
 
         when(userRepository.updateStatus(userId, false)).thenReturn(0);
@@ -254,7 +254,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void getAllUsers_shouldReturnPageOfUserResponse() {
+    void getAllUsers_shouldReturnPageOfUserResponse() {
         List<User> users = List.of(
                 createUser(1L, "Bob", "Duck", "bob@email.com", true,
                         LocalDate.of(2000, 1, 1),
@@ -298,7 +298,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void getAllUsers_shouldReturnEmptyPage_whenNoUsersFound() {
+    void getAllUsers_shouldReturnEmptyPage_whenNoUsersFound() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<User> emtyPage = Page.empty(pageable);
 
@@ -313,7 +313,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void getUserWithCards_shouldReturnUserWithCards_whenUserExists() {
+    void getUserWithCards_shouldReturnUserWithCards_whenUserExists() {
         Long userId = 1L;
         User user = createUser(userId, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
@@ -345,7 +345,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void getUserWithCards_shouldThrowResourceNotFoundException() {
+    void getUserWithCards_shouldThrowResourceNotFoundException() {
         Long userId = 10000L;
 
         when(userRepository.findUsersWithPaymentCards(userId)).thenReturn(Optional.empty());

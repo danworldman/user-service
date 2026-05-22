@@ -2,7 +2,6 @@ package com.innowise.userservice.model.dto.user;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Past;
-import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
 
 public record UserUpdateRequest(

@@ -27,6 +27,8 @@ import java.util.List;
 @AllArgsConstructor
 public class UserServiceImpl implements UserService {
 
+    private static final String USER_NOT_FOUND_MESSAGE = "User not found with id: ";
+
     private final UserRepository userRepository;
     private final UserMapper userMapper;
 
@@ -36,7 +38,7 @@ public class UserServiceImpl implements UserService {
         validateID(id);
 
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE + id));
         return userMapper.toDto(user);
     }
 
@@ -62,12 +64,11 @@ public class UserServiceImpl implements UserService {
         validateID(id);
 
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE + id));
 
-        if (request.email() != null && !request.email().equals(user.getEmail())) {
-            if (userRepository.existsByEmail(request.email())) {
-                throw new DuplicateEmailException("This email already exists: " + request.email());
-            }
+        if (request.email() != null && !request.email().equals(user.getEmail())
+                && userRepository.existsByEmail(request.email())) {
+            throw new DuplicateEmailException("This email already exists: " + request.email());
         }
 
         if (request.name() != null && request.name().isBlank()) {
@@ -88,7 +89,7 @@ public class UserServiceImpl implements UserService {
         validateID(id);
 
         if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User not found with id: " + id);
+            throw new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE + id);
         }
 
         userRepository.deleteById(id);
@@ -102,7 +103,7 @@ public class UserServiceImpl implements UserService {
 
         int resultOfUpdate = userRepository.updateStatus(id, true);
         if (resultOfUpdate == 0) {
-            throw new ResourceNotFoundException("User not found with id: " + id);
+            throw new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE + id);
         }
     }
 
@@ -114,7 +115,7 @@ public class UserServiceImpl implements UserService {
 
         int resultOfUpdate = userRepository.updateStatus(id, false);
         if (resultOfUpdate == 0) {
-            throw new ResourceNotFoundException("User not found with id: " + id);
+            throw new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE + id);
         }
     }
 
@@ -137,7 +138,7 @@ public class UserServiceImpl implements UserService {
         validateID(id);
 
         User user = userRepository.findUsersWithPaymentCards(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE + id));
 
         List<CardInfoDTO> cards = user.getPaymentCards().stream()
                 .map(card -> new CardInfoDTO(

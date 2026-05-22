@@ -107,7 +107,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void getById_shouldReturnCardResponse_whenCardExists() {
+    void getById_shouldReturnCardResponse_whenCardExists() {
         Long cardId = 1L;
         User user = createUser(1L, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
@@ -138,7 +138,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void getById_shouldThrowResourceNotFoundException_whenCardDoesNotExist() {
+    void getById_shouldThrowResourceNotFoundException_whenCardDoesNotExist() {
         Long cardId = 1000L;
 
         when(paymentCardRepository.findById(cardId)).thenReturn(Optional.empty());
@@ -148,7 +148,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void create_shouldReturnCardResponse_whenUserExists() {
+    void create_shouldReturnCardResponse_whenUserExists() {
         Long userId = 1L;
         User user = createUser(userId, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
@@ -195,7 +195,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void create_shouldThrowMaxNumberOfPaymentCardException_whenUserHasAlreadyFiveCards() {
+    void create_shouldThrowMaxNumberOfPaymentCardException_whenUserHasAlreadyFiveCards() {
         Long userId = 1L;
         User user = createUser(userId, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
@@ -219,7 +219,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void update_shouldReturnCardResponse_whenCardExists() {
+    void update_shouldReturnCardResponse_whenCardExists() {
         Long cardId = 1L;
         CardUpdateRequest cardUpdateRequest = new CardUpdateRequest("2222-3333", "Bob Duck",
                 LocalDate.of(2030, 1, 1)
@@ -255,7 +255,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void update_shouldThrowResourceNotFoundException_whenCardDoesNotExist() {
+    void update_shouldThrowResourceNotFoundException_whenCardDoesNotExist() {
         Long cardId = 10000L;
         CardUpdateRequest cardUpdateRequest = new CardUpdateRequest("2222-3333", "Bob Duck",
                 LocalDate.of(2030, 1, 1));
@@ -266,7 +266,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void delete_shouldDeleteCard_whenCardExists() {
+    void delete_shouldDeleteCard_whenCardExists() {
         Long cardId = 1L;
         User user = createUser(1L, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
@@ -293,7 +293,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void delete_shouldThrowResourceNotFoundException_whenCardDoesNotExist() {
+    void delete_shouldThrowResourceNotFoundException_whenCardDoesNotExist() {
         Long cardId = 1000L;
 
         when(paymentCardRepository.findById(cardId)).thenReturn(Optional.empty());
@@ -304,7 +304,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void activatePaymentCardStatus_shouldActivate_whenCardExists() {
+    void activatePaymentCardStatus_shouldActivate_whenCardExists() {
         Long cardId = 1L;
         User user = createUser(1L, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
@@ -331,7 +331,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void activatePaymentCardStatus_shouldThrowResourceNotFoundException_whenCardNotFound() {
+    void activatePaymentCardStatus_shouldThrowResourceNotFoundException_whenCardNotFound() {
         Long cardId = 1000L;
 
         when(paymentCardRepository.findById(cardId)).thenReturn(Optional.empty());
@@ -340,7 +340,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void deactivatePaymentCardStatus_shouldDeactivate_whenCardExists() {
+    void deactivatePaymentCardStatus_shouldDeactivate_whenCardExists() {
         Long cardId = 1L;
         User user = createUser(1L, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
@@ -367,7 +367,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void deactivatePaymentCardStatus_shouldThrowResourceNotFoundException_whenCardNotFound() {
+    void deactivatePaymentCardStatus_shouldThrowResourceNotFoundException_whenCardNotFound() {
         Long cardId = 1000L;
 
         when(paymentCardRepository.findById(cardId)).thenReturn(Optional.empty());
@@ -376,7 +376,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void getCardsByUserId_shouldPageOfCardResponse_whenCardExists() {
+    void getCardsByUserId_shouldPageOfCardResponse_whenCardExists() {
         Long userId = 1L;
         Pageable pageable = PageRequest.of(0, 10);
         User user = createUser(1L, "Bob", "Duck", "bob@email.com",
@@ -430,7 +430,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void getCardsByUserId_shouldReturnEmptyPage_whenNoCardsFound() {
+    void getCardsByUserId_shouldReturnEmptyPage_whenNoCardsFound() {
         Long userId = 1L;
         Pageable pageable = PageRequest.of(0, 10);
         Page<PaymentCard> emptyPage = Page.empty(pageable);
@@ -448,7 +448,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void getActiveCardsByUserId_shouldReturnListOfCardResponse() {
+    void getActiveCardsByUserId_shouldReturnListOfCardResponse() {
         Long userId = 1L;
         User user = createUser(userId, "Bob", "Duck", "bob@email.com",
                 true, LocalDate.of(2000, 1, 1),
@@ -499,7 +499,7 @@ public class PaymentCardServiceImplTest {
     }
 
     @Test
-    public void getActiveCardsByUserId_shouldThrowResourceNotFoundException_whenUserNotFound() {
+    void getActiveCardsByUserId_shouldThrowResourceNotFoundException_whenUserNotFound() {
         Long userId = 1000L;
         when(userRepository.existsById(userId)).thenReturn(false);
 
