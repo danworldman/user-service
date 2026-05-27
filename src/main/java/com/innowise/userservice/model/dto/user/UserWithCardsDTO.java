@@ -1,4 +1,6 @@
-package com.innowise.userservice.model.dto.card;
+package com.innowise.userservice.model.dto.user;
+
+import com.innowise.userservice.model.dto.card.CardInfoDTO;
 
 import java.util.List;
 

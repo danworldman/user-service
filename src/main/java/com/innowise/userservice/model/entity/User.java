@@ -64,14 +64,19 @@ public class User {
 
     @Override
     public final boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
         User user = (User) o;
-        return getEmail() != null && getEmail().equals(user.getEmail());
+        return getId() != null && getId().equals(user.getId());
     }
 
     @Override
     public final int hashCode() {
-        return Objects.hash(getEmail());
+        return Objects.hash(getId());
     }
 }

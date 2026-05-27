@@ -61,14 +61,19 @@ public class PaymentCard {
 
     @Override
     public final boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
         PaymentCard card = (PaymentCard) o;
-        return getNumber() != null && getNumber().equals(card.getNumber());
+        return getId() != null && getId().equals(card.getId());
     }
 
     @Override
     public final int hashCode() {
-        return Objects.hash(getNumber());
+        return Objects.hash(getId());
     }
 }

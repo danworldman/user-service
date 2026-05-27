@@ -1,5 +1,6 @@
 package com.innowise.userservice.exception;
 
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -51,6 +52,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ProblemDetail> handleNotFound(NoHandlerFoundException exception) {
         return response(HttpStatus.NOT_FOUND, "Endpoint not found");
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ProblemDetail> handleConstraintViolationException(ConstraintViolationException exception){
+        Map<String, String> errors = new HashMap<>();
+        exception.getConstraintViolations()
+                .forEach(error -> errors.put(
+                        error.getPropertyPath().toString(),
+                        error.getMessage()
+                ));
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
+        problemDetail.setProperty("errors", errors);
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)

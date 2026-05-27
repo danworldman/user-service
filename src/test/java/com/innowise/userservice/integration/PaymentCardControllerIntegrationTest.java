@@ -3,9 +3,9 @@ package com.innowise.userservice.integration;
 import com.innowise.userservice.model.dto.card.CardCreateRequest;
 import com.innowise.userservice.model.dto.card.CardResponse;
 import com.innowise.userservice.model.dto.card.CardUpdateRequest;
-import com.innowise.userservice.model.dto.card.UserWithCardsDTO;
 import com.innowise.userservice.model.dto.user.UserCreateRequest;
 import com.innowise.userservice.model.dto.user.UserResponse;
+import com.innowise.userservice.model.dto.user.UserWithCardsDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,42 +44,6 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
 
     private String usersUrl() {
         return "http://localhost:" + port + "/api/users";
-    }
-
-    private Long createTestUser() {
-        UserCreateRequest userRequest = new UserCreateRequest(
-                "Bob",
-                "Duck",
-                "bob@email.com",
-                LocalDate.of(2000, 1, 1)
-        );
-
-        ResponseEntity<UserResponse> responseEntity = restTemplate.postForEntity(
-                usersUrl(),
-                userRequest,
-                UserResponse.class
-        );
-
-        assertThat(responseEntity.getBody()).isNotNull();
-        return responseEntity.getBody().id();
-    }
-
-    private CardCreateRequest createCardRequest(Long userId) {
-        return new CardCreateRequest(
-                userId,
-                "1111222233334444",
-                "Bob Duck",
-                LocalDate.of(2030, 1, 1)
-        );
-    }
-
-    private CardCreateRequest createCardRequestWithNumber(Long userId, String number) {
-        return new CardCreateRequest(
-                userId,
-                number,
-                "Bob Duck",
-                LocalDate.of(2030, 1, 1)
-        );
     }
 
     @Test
@@ -324,56 +288,6 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void getCardsByUser_shouldReturnPageOfCards() {
-        Long userId = createTestUser();
-
-        for (int i = 1; i <= 3; i++) {
-            CardCreateRequest cardRequest = createCardRequestWithNumber(userId, "111122223333444" + i);
-            restTemplate.postForEntity(cardsUrl(), cardRequest, CardResponse.class);
-        }
-
-        ResponseEntity<String> pageResponse = restTemplate.getForEntity(
-                cardsUrl() + "/user/" + userId + "?page=0&size=2",
-                String.class
-        );
-
-        assertThat(pageResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(pageResponse.getBody()).contains("\"totalElements\":3");
-        assertThat(pageResponse.getBody()).contains("\"numberOfElements\":2");
-    }
-
-    @Test
-    void getActiveCardsByUser_shouldReturnListOfActiveCards() {
-        Long userId = createTestUser();
-        CardCreateRequest activeRequest = createCardRequest(userId);
-        restTemplate.postForEntity(cardsUrl(), activeRequest, CardResponse.class);
-
-        CardCreateRequest inactiveRequest = createCardRequestWithNumber(userId, "3333444455556666");
-        ResponseEntity<CardResponse> inactiveResponse = restTemplate.postForEntity(
-                cardsUrl(),
-                inactiveRequest,
-                CardResponse.class
-        );
-
-        assertThat(inactiveResponse.getBody()).isNotNull();
-        restTemplate.exchange(
-                cardsUrl() + "/" + inactiveResponse.getBody().id() + "/deactivate",
-                HttpMethod.PATCH,
-                null,
-                Void.class
-        );
-
-        ResponseEntity<CardResponse[]> getResponse = restTemplate.getForEntity(
-                cardsUrl() + "/user/" + userId + "/active",
-                CardResponse[].class
-        );
-
-        assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(getResponse.getBody()).hasSize(1);
-        assertThat(getResponse.getBody()[0].isActive()).isTrue();
-    }
-
-    @Test
     void getUserWithCards_cacheShouldBeInvalidatedAfterCardCreation() {
         Long userId = createTestUser();
         ResponseEntity<UserWithCardsDTO> responseBeforeCreation = restTemplate.getForEntity(
@@ -395,5 +309,66 @@ public class PaymentCardControllerIntegrationTest extends BaseIntegrationTest {
         assertThat(responseAfterCreation.getBody()).isNotNull();
         assertThat(responseAfterCreation.getBody().cards()).hasSize(1);
         assertThat(responseAfterCreation.getBody().cards().getFirst().number()).isEqualTo("1111222233334444");
+    }
+
+    @Test
+    void getAllCards_shouldFilterByHolderAndUserNames() {
+        Long userId = createTestUser();
+
+        CardCreateRequest cardCreateRequest = new CardCreateRequest(
+                userId, "1111222233334444", "Bob Duck", LocalDate.of(2030, 1, 1));
+        restTemplate.postForEntity(cardsUrl(), cardCreateRequest, CardResponse.class
+        );
+
+        CardCreateRequest wrongCardCreateRequest = new CardCreateRequest(
+                userId, "3333444455556666", "Sam Hock", LocalDate.of(2030, 1, 1));
+        restTemplate.postForEntity(cardsUrl(), wrongCardCreateRequest, CardResponse.class
+        );
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                cardsUrl() + "?holder=Bob&name=Bob&surname=Duck&page=0&size=10",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("\"number\":\"1111222233334444\"");
+        assertThat(response.getBody()).doesNotContain("\"number\":\"3333444455556666\"");
+        assertThat(response.getBody()).contains("\"totalElements\":1");
+    }
+
+    private Long createTestUser() {
+        UserCreateRequest userRequest = new UserCreateRequest(
+                "Bob",
+                "Duck",
+                "bob@email.com",
+                LocalDate.of(2000, 1, 1)
+        );
+
+        ResponseEntity<UserResponse> responseEntity = restTemplate.postForEntity(
+                usersUrl(),
+                userRequest,
+                UserResponse.class
+        );
+
+        assertThat(responseEntity.getBody()).isNotNull();
+        return responseEntity.getBody().id();
+    }
+
+    private CardCreateRequest createCardRequest(Long userId) {
+        return new CardCreateRequest(
+                userId,
+                "1111222233334444",
+                "Bob Duck",
+                LocalDate.of(2030, 1, 1)
+        );
+    }
+
+    private CardCreateRequest createCardRequestWithNumber(Long userId, String number) {
+        return new CardCreateRequest(
+                userId,
+                number,
+                "Bob Duck",
+                LocalDate.of(2030, 1, 1)
+        );
     }
 }

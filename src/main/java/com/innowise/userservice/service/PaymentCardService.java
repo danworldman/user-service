@@ -25,4 +25,7 @@ public interface PaymentCardService {
     Page<CardResponse> getCardsByUserId(Long userId, Pageable pageable);
 
     List<CardResponse> getActivePaymentCardsByUserId(Long userId);
+
+    Page<CardResponse> getAllCards(Long userId, Boolean active, String holder, String name, String surname,
+                                              Pageable pageable);
 }

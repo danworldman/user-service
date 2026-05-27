@@ -13,12 +13,15 @@ class PaymentCardEntityTest {
     @Test
     void testEqualsAndHashCode() {
         PaymentCard firstPaymentCard = new PaymentCard();
+        firstPaymentCard.setId(1L);
         firstPaymentCard.setNumber("1111222233334444");
 
         PaymentCard secondPaymentCard = new PaymentCard();
+        secondPaymentCard.setId(1L);
         secondPaymentCard.setNumber("1111222233334444");
 
         PaymentCard therdPaymentCard = new PaymentCard();
+        therdPaymentCard.setId(2L);
         therdPaymentCard.setNumber("6666666666666666");
 
         assertThat(firstPaymentCard).isEqualTo(firstPaymentCard);
@@ -26,6 +29,7 @@ class PaymentCardEntityTest {
         assertThat(secondPaymentCard).isEqualTo(firstPaymentCard);
 
         PaymentCard fourthPaymentCard = new PaymentCard();
+        fourthPaymentCard.setId(1L);
         fourthPaymentCard.setNumber("1111222233334444");
 
         assertThat(firstPaymentCard).isEqualTo(secondPaymentCard);
@@ -83,7 +87,7 @@ class PaymentCardEntityTest {
 
         PaymentCard anotherPaymentCard = new PaymentCard();
         anotherPaymentCard.setNumber("1111222233334444");
-        anotherPaymentCard.setId(999L);
+        anotherPaymentCard.setId(1L);
         anotherPaymentCard.setHolder("Bob Duck");
         anotherPaymentCard.setExpirationDate(LocalDate.of(2030, 1, 1));
         anotherPaymentCard.setActive(false);
@@ -105,10 +109,12 @@ class PaymentCardEntityTest {
     @Test
     void testSetContainsAfterChangingNonBusinessFields() {
         PaymentCard oldPaymentCard = new PaymentCard();
+        oldPaymentCard.setId(1L);
         oldPaymentCard.setNumber("1111222233334444");
         oldPaymentCard.setHolder("Bob Duck");
 
         PaymentCard newPaymentCard = new PaymentCard();
+        newPaymentCard.setId(1L);
         newPaymentCard.setNumber("1111222233334444");
         newPaymentCard.setHolder("Bob Duck");
 

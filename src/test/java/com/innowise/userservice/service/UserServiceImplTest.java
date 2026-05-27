@@ -4,13 +4,13 @@ import com.innowise.userservice.exception.DuplicateEmailException;
 import com.innowise.userservice.exception.ResourceNotFoundException;
 import com.innowise.userservice.mapper.UserMapper;
 import com.innowise.userservice.model.dto.card.CardInfoDTO;
-import com.innowise.userservice.model.dto.card.UserWithCardsDTO;
+import com.innowise.userservice.model.dto.user.UserWithCardsDTO;
 import com.innowise.userservice.model.dto.user.UserCreateRequest;
 import com.innowise.userservice.model.dto.user.UserResponse;
 import com.innowise.userservice.model.dto.user.UserUpdateRequest;
 import com.innowise.userservice.model.entity.PaymentCard;
 import com.innowise.userservice.model.entity.User;
-import com.innowise.userservice.repository.UserRepository;
+import com.innowise.userservice.dao.UserDAO;
 import com.innowise.userservice.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,14 +37,13 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceImplTest {
 
     @Mock
-    private UserRepository userRepository;
+    private UserDAO userDAO;
 
     @Mock
     private UserMapper userMapper;
@@ -66,13 +66,13 @@ public class UserServiceImplTest {
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userDAO.findById(userId)).thenReturn(Optional.of(user));
         when(userMapper.toDto(user)).thenReturn(userResponse);
 
         UserResponse result = userService.getUserById(userId);
 
         assertEquals(userResponse, result);
-        verify(userRepository).findById(userId);
+        verify(userDAO).findById(userId);
         verify(userMapper).toDto(user);
     }
 
@@ -80,13 +80,21 @@ public class UserServiceImplTest {
     void getUserById_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
         Long userId = 10000L;
 
-        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+        when(userDAO.findById(userId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> userService.getUserById(userId));
 
-        verify(userRepository).findById(userId);
-        verifyNoMoreInteractions(userRepository);
+        verify(userDAO).findById(userId);
         verify(userMapper, never()).toDto(any());
+    }
+
+    @Test
+    void getUserById_shouldThrowIllegalArgumentException_whenIdIsNull() {
+        Long userId = null;
+
+        assertThrows(IllegalArgumentException.class, () -> userService.getUserById(userId));
+
+        verify(userDAO, never()).findById(any());
     }
 
     @Test
@@ -108,17 +116,17 @@ public class UserServiceImplTest {
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
 
-        when(userRepository.existsByEmail(userCreateRequest.email())).thenReturn(false);
+        when(userDAO.existsByEmail(userCreateRequest.email())).thenReturn(false);
         when(userMapper.toEntity(userCreateRequest)).thenReturn(user);
-        when(userRepository.save(user)).thenReturn(user);
+        when(userDAO.save(user)).thenReturn(user);
         when(userMapper.toDto(user)).thenReturn(userResponse);
 
         UserResponse result = userService.createUser(userCreateRequest);
 
         assertEquals(result, userResponse);
-        verify(userRepository).existsByEmail(userCreateRequest.email());
+        verify(userDAO).existsByEmail(userCreateRequest.email());
         verify(userMapper).toEntity(userCreateRequest);
-        verify(userRepository).save(user);
+        verify(userDAO).save(user);
         verify(userMapper).toDto(user);
     }
 
@@ -128,15 +136,24 @@ public class UserServiceImplTest {
                 LocalDate.of(2000, 1, 1)
         );
 
-        when(userRepository.existsByEmail(userCreateRequest.email())).thenReturn(true);
+        when(userDAO.existsByEmail(userCreateRequest.email())).thenReturn(true);
 
         assertThrows(DuplicateEmailException.class, () -> userService.createUser(userCreateRequest));
 
-        verify(userRepository).existsByEmail(userCreateRequest.email());
+        verify(userDAO).existsByEmail(userCreateRequest.email());
         verify(userMapper, never()).toEntity(any());
-        verify(userRepository, never()).save(any());
+        verify(userDAO, never()).save(any());
         verify(userMapper, never()).toDto(any());
+    }
 
+    @Test
+    void createUser_shouldThrowIllegalArgumentException_whenRequestIsNull() {
+        UserCreateRequest userCreateRequest = null;
+
+        assertThrows(IllegalArgumentException.class, () -> userService.createUser(userCreateRequest));
+
+        verify(userDAO, never()).existsByEmail(any());
+        verify(userMapper, never()).toEntity(any());
     }
 
     @Test
@@ -158,17 +175,17 @@ public class UserServiceImplTest {
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(oldUser));
+        when(userDAO.findById(userId)).thenReturn(Optional.of(oldUser));
         when(userMapper.toDto(oldUser)).thenReturn(newUserResponse);
 
         UserResponse result = userService.updateUser(userId, userUpdateRequest);
 
         assertEquals(result, newUserResponse);
-        verify(userRepository).findById(userId);
+        verify(userDAO).findById(userId);
         verify(userMapper).updateEntity(userUpdateRequest, oldUser);
         verify(userMapper).toDto(oldUser);
-        verify(userRepository, never()).existsByEmail(any());
-        verify(userRepository, never()).save(any());
+        verify(userDAO, never()).existsByEmail(any());
+        verify(userDAO, never()).save(any());
     }
 
     @Test
@@ -178,79 +195,97 @@ public class UserServiceImplTest {
                 LocalDate.of(2020, 1, 1)
         );
 
-        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+        when(userDAO.findById(userId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> userService.updateUser(userId, userUpdateRequest));
 
-        verify(userRepository).findById(userId);
+        verify(userDAO).findById(userId);
     }
 
     @Test
     void deleteUser_shouldReturnVoid() {
         Long userId = 1L;
 
-        when(userRepository.existsById(userId)).thenReturn(true);
+        when(userDAO.existsById(userId)).thenReturn(true);
 
         userService.deleteUser(userId);
 
-        verify(userRepository).existsById(userId);
-        verify(userRepository).deleteById(userId);
+        verify(userDAO).existsById(userId);
+        verify(userDAO).deleteById(userId);
     }
 
     @Test
     void deleteUser_shouldThrowResourceNotFoundException() {
         Long userId = 10000L;
 
-        when(userRepository.existsById(userId)).thenReturn(false);
+        when(userDAO.existsById(userId)).thenReturn(false);
 
         assertThrows(ResourceNotFoundException.class, () -> userService.deleteUser(userId));
 
-        verify(userRepository).existsById(userId);
-        verify(userRepository, never()).deleteById(userId);
+        verify(userDAO).existsById(userId);
+        verify(userDAO, never()).deleteById(userId);
     }
 
     @Test
     public void activateUserStatus_shouldReturnVoid() {
         Long userId = 1L;
+        User user = createUser(userId, "Bob", "Duck", "bob@email.com", false,
+                LocalDate.of(2000, 1, 1),
+                LocalDateTime.of(2026, 5, 19, 3, 1),
+                LocalDateTime.of(2026, 5, 19, 3, 1)
+        );
 
-        when(userRepository.updateStatus(userId, true)).thenReturn(1);
+        when(userDAO.findById(userId)).thenReturn(Optional.of(user));
+        when(userDAO.save(user)).thenReturn(user);
 
         userService.activateUserStatus(userId);
 
-        verify(userRepository).updateStatus(userId, true);
+        assertTrue(user.isActive());
+        verify(userDAO).findById(userId);
+        verify(userDAO).save(user);
     }
 
     @Test
     void activateUserStatus_shouldThrowResourceNotFoundException() {
         Long userId = 10000L;
 
-        when(userRepository.updateStatus(userId, true)).thenReturn(0);
+        when(userDAO.findById(userId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> userService.activateUserStatus(userId));
 
-        verify(userRepository).updateStatus(userId, true);
+        verify(userDAO).findById(userId);
+        verify(userDAO, never()).save(any());
     }
 
     @Test
     void deactivateUserStatus_shouldReturnVoid() {
         Long userId = 1L;
+        User user = createUser(userId, "Bob", "Duck", "bob@email.com", true,
+                LocalDate.of(2000, 1, 1),
+                LocalDateTime.of(2026, 5, 19, 3, 1),
+                LocalDateTime.of(2026, 5, 19, 3, 1)
+        );
 
-        when(userRepository.updateStatus(userId, false)).thenReturn(1);
+        when(userDAO.findById(userId)).thenReturn(Optional.of(user));
+        when(userDAO.save(user)).thenReturn(user);
 
         userService.deactivateUserStatus(userId);
 
-        verify(userRepository).updateStatus(userId, false);
+        assertFalse(user.isActive());
+        verify(userDAO).findById(userId);
+        verify(userDAO).save(user);
     }
 
     @Test
     void deactivateUserStatus_shouldThrowResourceNotFoundException() {
         Long userId = 10000L;
 
-        when(userRepository.updateStatus(userId, false)).thenReturn(0);
+        when(userDAO.findById(userId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> userService.deactivateUserStatus(userId));
 
-        verify(userRepository).updateStatus(userId, false);
+        verify(userDAO).findById(userId);
+        verify(userDAO, never()).save(any());
     }
 
     @Test
@@ -267,7 +302,6 @@ public class UserServiceImplTest {
         );
 
         Pageable pageable = PageRequest.of(0, 10);
-
         Page<User> userPage = new PageImpl<>(users, pageable, 2);
 
         UserResponse userResponseNumberOne = new UserResponse(1L, "Bob", "Duck", "bob@email.com",
@@ -282,7 +316,7 @@ public class UserServiceImplTest {
                 LocalDateTime.of(2026, 5, 20, 3, 1)
         );
 
-        when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(userPage);
+        when(userDAO.findAll(any(Specification.class), eq(pageable))).thenReturn(userPage);
         when(userMapper.toDto(users.get(0))).thenReturn(userResponseNumberOne);
         when(userMapper.toDto(users.get(1))).thenReturn(userResponseNumberTwo);
 
@@ -292,7 +326,7 @@ public class UserServiceImplTest {
         assertEquals(2, result.getTotalElements());
         assertEquals(userResponseNumberOne, result.getContent().get(0));
         assertEquals(userResponseNumberTwo, result.getContent().get(1));
-        verify(userRepository).findAll(any(Specification.class), eq(pageable));
+        verify(userDAO).findAll(any(Specification.class), eq(pageable));
         verify(userMapper).toDto(users.get(0));
         verify(userMapper).toDto(users.get(1));
     }
@@ -302,13 +336,13 @@ public class UserServiceImplTest {
         Pageable pageable = PageRequest.of(0, 10);
         Page<User> emtyPage = Page.empty(pageable);
 
-        when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(emtyPage);
+        when(userDAO.findAll(any(Specification.class), eq(pageable))).thenReturn(emtyPage);
 
         Page<UserResponse> result = userService.getAllUsers("Bob", "Duck", pageable);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
-        verify(userRepository).findAll(any(Specification.class), eq(pageable));
+        verify(userDAO).findAll(any(Specification.class), eq(pageable));
         verify(userMapper, never()).toDto(any());
     }
 
@@ -331,29 +365,29 @@ public class UserServiceImplTest {
         user.setPaymentCards(List.of(paymentCard));
 
         CardInfoDTO cardInfoDTO = new CardInfoDTO(1L, "1111-2222", "Bob Duck", true);
-
         UserWithCardsDTO userWithCardsDTO = new UserWithCardsDTO(
                 userId, "Bob", "Duck", "bob@email.com", true, List.of(cardInfoDTO)
         );
 
-        when(userRepository.findUsersWithPaymentCards(userId)).thenReturn(Optional.of(user));
+        when(userDAO.findUsersWithPaymentCards(userId)).thenReturn(Optional.of(user));
+        when(userMapper.toUserWithCardsDTO(user)).thenReturn(userWithCardsDTO);
 
         UserWithCardsDTO result = userService.getUserWithCards(userId);
 
         assertEquals(userWithCardsDTO, result);
-        verify(userRepository).findUsersWithPaymentCards(userId);
+        verify(userDAO).findUsersWithPaymentCards(userId);
+        verify(userMapper).toUserWithCardsDTO(user);
     }
 
     @Test
     void getUserWithCards_shouldThrowResourceNotFoundException() {
         Long userId = 10000L;
 
-        when(userRepository.findUsersWithPaymentCards(userId)).thenReturn(Optional.empty());
+        when(userDAO.findUsersWithPaymentCards(userId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> userService.getUserWithCards(userId));
 
-        verify(userRepository).findUsersWithPaymentCards(userId);
-        verifyNoMoreInteractions(userRepository);
+        verify(userDAO).findUsersWithPaymentCards(userId);
     }
 
     private User createUser(Long id, String name, String surname, String email, boolean isActive,

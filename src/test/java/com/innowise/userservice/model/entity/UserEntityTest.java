@@ -13,19 +13,23 @@ class UserEntityTest {
     @Test
     void testEqualsAndHashCode() {
         User firstUser = new User();
+        firstUser.setId(1L);
         firstUser.setEmail("bob@email.com");
 
         User secondUser = new User();
-        secondUser.setEmail("bob@email.com");
+        secondUser.setId(1L);
+        secondUser.setEmail("sam@email.com");
 
         User thirdUser = new User();
-        thirdUser.setEmail("sam@email.com");
+        thirdUser.setId(2L);
+        thirdUser.setEmail("bob@email.com");
         
         assertThat(firstUser).isEqualTo(firstUser);
         assertThat(firstUser).isEqualTo(secondUser);
         assertThat(secondUser).isEqualTo(firstUser);
 
         User fourthUser = new User();
+        fourthUser.setId(1L);
         fourthUser.setEmail("bob@email.com");
 
         assertThat(firstUser).isEqualTo(secondUser);
@@ -83,8 +87,8 @@ class UserEntityTest {
         user.setActive(true);
 
         User anotherUser = new User();
-        anotherUser.setEmail("bob@email.com");
-        anotherUser.setId(999L);
+        anotherUser.setEmail("sam@email.com");
+        anotherUser.setId(1L);
         anotherUser.setName("Sam");
         anotherUser.setSurname("Hock");
         anotherUser.setBirthDate(LocalDate.of(2000, 1, 1));
@@ -97,6 +101,7 @@ class UserEntityTest {
     @Test
     void testHashCodeStability() {
         User user = new User();
+        user.setId(1L);
         user.setEmail("bob@email.com");
         int first = user.hashCode();
         int second = user.hashCode();
@@ -107,11 +112,13 @@ class UserEntityTest {
     @Test
     void testSetContainsAfterChangingNonBusinessFields() {
         User oldUser = new User();
+        oldUser.setId(1L);
         oldUser.setEmail("bob@email.com");
         oldUser.setName("Bob");
 
         User newUser = new User();
-        newUser.setEmail("bob@email.com");
+        newUser.setId(1L);
+        newUser.setEmail("sam@email.com");
         newUser.setName("Sam");
 
         Set<User> set = new HashSet<>();

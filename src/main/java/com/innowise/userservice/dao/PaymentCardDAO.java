@@ -1,23 +1,19 @@
-package com.innowise.userservice.repository;
+package com.innowise.userservice.dao;
 
 import com.innowise.userservice.model.entity.PaymentCard;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface PaymentCardRepository extends JpaRepository<PaymentCard, Long> {
+public interface PaymentCardDAO extends JpaRepository<PaymentCard, Long>, JpaSpecificationExecutor<PaymentCard> {
 
-    @Query("SELECT c FROM PaymentCard c WHERE c.user.id = :userId AND c.isActive = true")
+    @Query(value = "SELECT * FROM payment_cards WHERE user_id = :userId AND active = true", nativeQuery = true)
     List<PaymentCard> findActivePaymentCardsByUserId(@Param("userId") Long userId);
-
-    @Modifying(clearAutomatically = true)
-    @Query(value = "UPDATE payment_cards SET active = :active, updated_at = NOW() WHERE id = :id", nativeQuery = true)
-    int updateCardActiveStatus(@Param("id") Long id, @Param("active") boolean active);
 
     int countByUserId(Long id);
 
