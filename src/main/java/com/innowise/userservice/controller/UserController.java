@@ -1,9 +1,11 @@
 package com.innowise.userservice.controller;
 
-import com.innowise.userservice.model.dto.card.UserWithCardsDTO;
+import com.innowise.userservice.model.dto.card.CardResponse;
+import com.innowise.userservice.model.dto.user.UserWithCardsDTO;
 import com.innowise.userservice.model.dto.user.UserCreateRequest;
 import com.innowise.userservice.model.dto.user.UserResponse;
 import com.innowise.userservice.model.dto.user.UserUpdateRequest;
+import com.innowise.userservice.service.PaymentCardService;
 import com.innowise.userservice.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -19,11 +21,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @Validated
 @RestController
@@ -32,6 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
+    private final PaymentCardService paymentCardService;
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserById(@PathVariable @Positive Long id) {
@@ -43,7 +47,7 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(request));
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<UserResponse> updateUser(@PathVariable @Positive Long id,
                                                    @Valid @RequestBody UserUpdateRequest request) {
         return ResponseEntity.ok(userService.updateUser(id, request));
@@ -78,5 +82,17 @@ public class UserController {
     @GetMapping("/{id}/with-cards")
     public ResponseEntity<UserWithCardsDTO> getUserWithCards(@PathVariable @Positive Long id) {
         return ResponseEntity.ok(userService.getUserWithCards(id));
+    }
+
+    @GetMapping("/{userId}/cards")
+    public ResponseEntity<Page<CardResponse>> getUserCards(
+            @PathVariable @Positive Long userId,
+            @PageableDefault Pageable pageable) {
+        return ResponseEntity.ok(paymentCardService.getCardsByUserId(userId, pageable));
+    }
+
+    @GetMapping("/{userId}/cards/active")
+    public ResponseEntity<List<CardResponse>> getUserActiveCards(@PathVariable @Positive Long userId) {
+        return ResponseEntity.ok(paymentCardService.getActivePaymentCardsByUserId(userId));
     }
 }

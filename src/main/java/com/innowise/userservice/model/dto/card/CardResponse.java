@@ -12,5 +12,4 @@ public record CardResponse(
         boolean isActive,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
-)
-{}
+) {}

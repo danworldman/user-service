@@ -20,6 +20,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "payment_cards")
@@ -60,13 +61,19 @@ public class PaymentCard {
 
     @Override
     public final boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof PaymentCard card)) return false;
-        return id != null && id.equals(card.getId());
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        PaymentCard card = (PaymentCard) o;
+        return getId() != null && getId().equals(card.getId());
     }
 
     @Override
     public final int hashCode() {
-        return getClass().hashCode();
+        return Objects.hash(getId());
     }
 }

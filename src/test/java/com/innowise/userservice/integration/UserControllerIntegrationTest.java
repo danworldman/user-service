@@ -2,25 +2,27 @@ package com.innowise.userservice.integration;
 
 import com.innowise.userservice.model.dto.card.CardCreateRequest;
 import com.innowise.userservice.model.dto.card.CardResponse;
-import com.innowise.userservice.model.dto.card.UserWithCardsDTO;
 import com.innowise.userservice.model.dto.user.UserCreateRequest;
 import com.innowise.userservice.model.dto.user.UserResponse;
 import com.innowise.userservice.model.dto.user.UserUpdateRequest;
+import com.innowise.userservice.model.dto.user.UserWithCardsDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.DefaultResponseErrorHandler;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class UserControllerIntegrationTest extends BaseIntegrationTest {
 
@@ -32,6 +34,12 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
     @BeforeEach
     void setUp() {
         restTemplate = createRestTemplate();
+        restTemplate.setErrorHandler(new DefaultResponseErrorHandler() {
+            @Override
+            public boolean hasError(ClientHttpResponse response) {
+                return false;
+            }
+        });
 
         jdbcTemplate.execute("TRUNCATE TABLE payment_cards RESTART IDENTITY CASCADE");
         jdbcTemplate.execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
@@ -39,24 +47,6 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
 
     private String baseUrl() {
         return "http://localhost:" + port + "/api/users";
-    }
-
-    private UserCreateRequest createUserRequest() {
-        return new UserCreateRequest(
-                "Bob",
-                "Duck",
-                "bob@email.com",
-                LocalDate.of(2000, 1, 1)
-        );
-    }
-
-    private UserCreateRequest createAnotherUserRequest() {
-        return new UserCreateRequest(
-                "Sam",
-                "Hock",
-                "sam@email.com",
-                LocalDate.of(2000, 1, 1)
-        );
     }
 
     @Test
@@ -83,8 +73,14 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void getUserById_shouldReturnNotFound_whenUserDoesNotExist() {
-        assertThatThrownBy(() -> restTemplate.getForEntity(baseUrl() + "/10000", UserResponse.class))
-                .isInstanceOf(HttpClientErrorException.NotFound.class);
+        ResponseEntity<ProblemDetail> response = restTemplate.getForEntity(
+                baseUrl() + "/10000",
+                ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDetail()).contains("not found");
     }
 
     @Test
@@ -109,8 +105,75 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
         UserCreateRequest createRequest = createUserRequest();
         restTemplate.postForEntity(baseUrl(), createRequest, UserResponse.class);
 
-        assertThatThrownBy(() -> restTemplate.postForEntity(baseUrl(), createRequest, UserResponse.class))
-                .isInstanceOf(HttpClientErrorException.Conflict.class);
+        ResponseEntity<ProblemDetail> response = restTemplate.postForEntity(
+                baseUrl(),
+                createRequest,
+                ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+    }
+
+    @Test
+    void createUser_shouldReturnValidationErrors_withInvalidEmail() {
+        UserCreateRequest createRequest = new UserCreateRequest(
+                "Bob",
+                "Duck",
+                "badEmail",
+                LocalDate.of(2000, 1, 1)
+        );
+
+        ResponseEntity<ProblemDetail> response = restTemplate.postForEntity(
+                baseUrl(),
+                createRequest,
+                ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDetail()).isEqualTo("Validation failed");
+
+        Map<String, String> errors = (Map<String, String>) response.getBody().getProperties().get("errors");
+        assertThat(errors).containsEntry("email", "Invalid email format");
+    }
+
+    @Test
+    void createUser_shouldReturnBadRequest_withFutureBirthDate() {
+        UserCreateRequest createRequest = new UserCreateRequest(
+                "Bob",
+                "Duck",
+                "bob@email.com",
+                LocalDate.of(2030, 1, 1)
+        );
+
+        ResponseEntity<ProblemDetail> response = restTemplate.postForEntity(
+                baseUrl(),
+                createRequest,
+                ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+    }
+
+    @Test
+    void createUser_shouldReturnBadRequest_withEmptyName() {
+        UserCreateRequest createRequest = new UserCreateRequest(
+                "",
+                "Duck",
+                "bob@email.com",
+                LocalDate.of(2000, 1, 1)
+        );
+
+        ResponseEntity<ProblemDetail> response = restTemplate.postForEntity(
+                baseUrl(),
+                createRequest,
+                ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
     }
 
     @Test
@@ -135,7 +198,7 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
         HttpEntity<UserUpdateRequest> entity = new HttpEntity<>(updateRequest);
         ResponseEntity<UserResponse> updateResponse = restTemplate.exchange(
                 baseUrl() + "/" + userId,
-                HttpMethod.PUT,
+                HttpMethod.PATCH,
                 entity,
                 UserResponse.class
         );
@@ -160,15 +223,119 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
         assertThat(secondCreateResponse.getBody()).isNotNull();
         Long secondUserId = secondCreateResponse.getBody().id();
 
-        UserUpdateRequest updateRequest = new UserUpdateRequest(null, null, "bob@email.com", null);
+        UserUpdateRequest updateRequest = new UserUpdateRequest(
+                null,
+                null,
+                "bob@email.com",
+                null
+        );
+
         HttpEntity<UserUpdateRequest> entity = new HttpEntity<>(updateRequest);
 
-        assertThatThrownBy(() -> restTemplate.exchange(
+        ResponseEntity<ProblemDetail> response = restTemplate.exchange(
                 baseUrl() + "/" + secondUserId,
-                HttpMethod.PUT,
+                HttpMethod.PATCH,
                 entity,
-                Void.class
-        )).isInstanceOf(HttpClientErrorException.Conflict.class);
+                ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+    }
+
+    @Test
+    void updateUser_shouldReturnBadRequest_withEmptyName() {
+        UserCreateRequest createRequest = createUserRequest();
+        ResponseEntity<UserResponse> createResponse = restTemplate.postForEntity(
+                baseUrl(),
+                createRequest,
+                UserResponse.class
+        );
+
+        assertThat(createResponse.getBody()).isNotNull();
+        Long userId = createResponse.getBody().id();
+
+        UserUpdateRequest updateRequest = new UserUpdateRequest(" ", null, null, null);
+        HttpEntity<UserUpdateRequest> entity = new HttpEntity<>(updateRequest);
+
+        ResponseEntity<ProblemDetail> response = restTemplate.exchange(
+                baseUrl() + "/" + userId,
+                HttpMethod.PATCH,
+                entity,
+                ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+
+        assertThat(response.getBody().getDetail()).isNotNull();
+    }
+
+    @Test
+    void updateUser_withInvalidEmail_shouldReturnBadRequest() {
+        UserCreateRequest createRequest = createUserRequest();
+        ResponseEntity<UserResponse> createResponse = restTemplate.postForEntity(
+                baseUrl(),
+                createRequest,
+                UserResponse.class
+        );
+
+        assertThat(createResponse.getBody()).isNotNull();
+        Long userId = createResponse.getBody().id();
+
+        UserUpdateRequest update = new UserUpdateRequest(
+                null,
+                null,
+                "badEmail",
+                null
+        );
+
+        HttpEntity<UserUpdateRequest> entity = new HttpEntity<>(update);
+
+        ResponseEntity<ProblemDetail> response = restTemplate.exchange(
+                baseUrl() + "/" + userId,
+                HttpMethod.PATCH,
+                entity,
+                ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+
+        Map<String, String> errors = (Map<String, String>) response.getBody().getProperties().get("errors");
+        assertThat(errors).containsEntry("email", "Invalid email format");
+    }
+
+    @Test
+    void updateUser_withFutureBirthDate_shouldReturnBadRequest() {
+        UserCreateRequest createRequest = createUserRequest();
+        ResponseEntity<UserResponse> createResponse = restTemplate.postForEntity(
+                baseUrl(),
+                createRequest,
+                UserResponse.class
+        );
+
+        assertThat(createResponse.getBody()).isNotNull();
+        Long userId = createResponse.getBody().id();
+
+        UserUpdateRequest update = new UserUpdateRequest(
+                null,
+                null,
+                null,
+                LocalDate.of(2030, 1, 1)
+        );
+
+        HttpEntity<UserUpdateRequest> entity = new HttpEntity<>(update);
+
+        ResponseEntity<ProblemDetail> response = restTemplate.exchange(
+                baseUrl() + "/" + userId,
+                HttpMethod.PATCH,
+                entity,
+                ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
     }
 
     @Test
@@ -191,8 +358,14 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
         );
 
         assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        assertThatThrownBy(() -> restTemplate.getForEntity(baseUrl() + "/" + userId, UserResponse.class))
-                .isInstanceOf(HttpClientErrorException.NotFound.class);
+
+        ResponseEntity<ProblemDetail> getResponse = restTemplate.getForEntity(
+                baseUrl() + "/" + userId,
+                ProblemDetail.class
+        );
+
+        assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(getResponse.getBody()).isNotNull();
     }
 
     @Test
@@ -291,7 +464,109 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void getUserWithCards_shouldReturnNotFound_whenUserDoesNotExist() {
-        assertThatThrownBy(() -> restTemplate.getForEntity(baseUrl() + "/10000/with-cards", UserWithCardsDTO.class))
-                .isInstanceOf(HttpClientErrorException.NotFound.class);
+        ResponseEntity<ProblemDetail> response = restTemplate.getForEntity(
+                baseUrl() + "/10000/with-cards",
+                ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDetail()).contains("not found");
+    }
+
+    @Test
+    void getUserCards_shouldReturnPageOfCards() {
+        Long userId = createTestUser();
+
+        for (int i = 1; i <= 3; i++) {
+            CardCreateRequest cardRequest = new CardCreateRequest(
+                    userId,
+                    "111122223333444" + i,
+                    "Bob Duck",
+                    LocalDate.of(2030, 1, 1)
+            );
+            restTemplate.postForEntity("http://localhost:" + port + "/api/cards", cardRequest, CardResponse.class);
+        }
+
+        ResponseEntity<String> pageResponse = restTemplate.getForEntity(
+                baseUrl() + "/" + userId + "/cards?page=0&size=2",
+                String.class
+        );
+
+        assertThat(pageResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(pageResponse.getBody()).contains("\"totalElements\":3");
+        assertThat(pageResponse.getBody()).contains("\"numberOfElements\":2");
+    }
+
+    @Test
+    void getActiveCardsByUser_shouldReturnListOfActiveCards() {
+        Long userId = createTestUser();
+
+        CardCreateRequest activeRequest = new CardCreateRequest(
+                userId,
+                "1111222233334444",
+                "Bob Duck",
+                LocalDate.of(2030, 1, 1)
+        );
+        restTemplate.postForEntity("http://localhost:" + port + "/api/cards", activeRequest, CardResponse.class);
+
+        CardCreateRequest inactiveRequest = new CardCreateRequest(
+                userId,
+                "3333444455556666",
+                "Bob Duck",
+                LocalDate.of(2030, 1, 1)
+        );
+        ResponseEntity<CardResponse> inactiveResponse = restTemplate.postForEntity(
+                "http://localhost:" + port + "/api/cards",
+                inactiveRequest,
+                CardResponse.class
+        );
+        assertThat(inactiveResponse.getBody()).isNotNull();
+        Long inactiveCardId = inactiveResponse.getBody().id();
+
+        restTemplate.exchange(
+                "http://localhost:" + port + "/api/cards/" + inactiveCardId + "/deactivate",
+                HttpMethod.PATCH,
+                null,
+                Void.class
+        );
+
+        ResponseEntity<CardResponse[]> getResponse = restTemplate.getForEntity(
+                baseUrl() + "/" + userId + "/cards/active",
+                CardResponse[].class
+        );
+
+        assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(getResponse.getBody()).hasSize(1);
+        assertThat(getResponse.getBody()[0].isActive()).isTrue();
+    }
+
+    private UserCreateRequest createUserRequest() {
+        return new UserCreateRequest(
+                "Bob",
+                "Duck",
+                "bob@email.com",
+                LocalDate.of(2000, 1, 1)
+        );
+    }
+
+    private UserCreateRequest createAnotherUserRequest() {
+        return new UserCreateRequest(
+                "Sam",
+                "Hock",
+                "sam@email.com",
+                LocalDate.of(2000, 1, 1)
+        );
+    }
+
+    private Long createTestUser() {
+        UserCreateRequest userRequest = createUserRequest();
+        ResponseEntity<UserResponse> responseEntity = restTemplate.postForEntity(
+                baseUrl(),
+                userRequest,
+                UserResponse.class
+        );
+        assertThat(responseEntity.getBody()).isNotNull();
+        return responseEntity.getBody().id();
     }
 }

@@ -42,6 +42,7 @@ databaseChangeLog:
                   type: BOOLEAN
                   constraints:
                     nullable: false
+                  defaultValue: true
               - column:
                   name: created_at
                   type: TIMESTAMP

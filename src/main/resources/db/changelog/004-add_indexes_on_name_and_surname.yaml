@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 4
+      author: danworldman
+      changes:
+        - createIndex:
+            indexName: idx_users_name
+            tableName: users
+            columns:
+              - column:
+                  name: name
+        - createIndex:
+            indexName: idx_users_surname
+            tableName: users
+            columns:
+              - column:
+                  name: surname

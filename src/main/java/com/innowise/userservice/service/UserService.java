@@ -1,6 +1,6 @@
 package com.innowise.userservice.service;
 
-import com.innowise.userservice.model.dto.card.UserWithCardsDTO;
+import com.innowise.userservice.model.dto.user.UserWithCardsDTO;
 import com.innowise.userservice.model.dto.user.UserCreateRequest;
 import com.innowise.userservice.model.dto.user.UserResponse;
 import com.innowise.userservice.model.dto.user.UserUpdateRequest;

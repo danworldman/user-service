@@ -3,6 +3,7 @@ package com.innowise.userservice.controller;
 import com.innowise.userservice.model.dto.card.CardCreateRequest;
 import com.innowise.userservice.model.dto.card.CardResponse;
 import com.innowise.userservice.model.dto.card.CardUpdateRequest;
+import com.innowise.userservice.model.dto.user.UserResponse;
 import com.innowise.userservice.service.PaymentCardService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -66,15 +68,19 @@ public class PaymentCardController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<Page<CardResponse>> getCardsByUser(
-            @PathVariable @Positive Long userId,
-            @PageableDefault Pageable pageable) {
-        return ResponseEntity.ok(paymentCardService.getCardsByUserId(userId, pageable));
-    }
-
     @GetMapping("/user/{userId}/active")
     public ResponseEntity<List<CardResponse>> getActiveCardsByUser(@PathVariable @Positive Long userId) {
         return ResponseEntity.ok(paymentCardService.getActivePaymentCardsByUserId(userId));
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<CardResponse>> getAllCards(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String holder,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String surname,
+            @PageableDefault Pageable pageable) {
+        return ResponseEntity.ok(paymentCardService.getAllCards(userId, active, holder, name, surname, pageable));
     }
 }

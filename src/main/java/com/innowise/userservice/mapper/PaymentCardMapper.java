@@ -1,6 +1,7 @@
 package com.innowise.userservice.mapper;
 
 import com.innowise.userservice.model.dto.card.CardCreateRequest;
+import com.innowise.userservice.model.dto.card.CardInfoDTO;
 import com.innowise.userservice.model.dto.card.CardResponse;
 import com.innowise.userservice.model.dto.card.CardUpdateRequest;
 import com.innowise.userservice.model.entity.PaymentCard;
@@ -28,4 +29,7 @@ public interface PaymentCardMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "user", ignore = true)
     void updateEntity(CardUpdateRequest request, @MappingTarget PaymentCard paymentCard);
+
+    @Mapping(source = "active", target = "isActive")
+    CardInfoDTO toCardInfoDTO(PaymentCard card);
 }
